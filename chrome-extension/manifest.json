@@ -5,7 +5,8 @@
   "description": "Extract assignments from Moodle and send notifications",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
     "https://moodle.lafayette.edu/*"

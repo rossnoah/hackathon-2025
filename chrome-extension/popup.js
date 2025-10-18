@@ -51,32 +51,54 @@ function displayAssignments(assignments) {
 document.getElementById('extractBtn').addEventListener('click', async () => {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const moodleUrl = 'https://moodle.lafayette.edu/calendar/view.php?view=upcoming&course=1';
 
+    // Check if we're already on the Moodle calendar page
     if (!tab.url.includes('moodle.lafayette.edu/calendar')) {
-      showStatus('Please navigate to the Moodle calendar page first!', 'error');
-      return;
+      showStatus('Opening Moodle calendar...', 'info');
+
+      // Open the Moodle calendar in a new tab
+      chrome.tabs.create({ url: moodleUrl }, (newTab) => {
+        // Wait for the page to load, then extract
+        chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
+          if (tabId === newTab.id && info.status === 'complete') {
+            chrome.tabs.onUpdated.removeListener(listener);
+
+            // Wait a bit more for content to render
+            setTimeout(() => {
+              extractFromTab(newTab.id);
+            }, 1000);
+          }
+        });
+      });
+    } else {
+      // Already on the page, extract immediately
+      extractFromTab(tab.id);
     }
-
-    showStatus('Extracting assignments...', 'info');
-
-    chrome.tabs.sendMessage(tab.id, { action: 'extractAssignments' }, (response) => {
-      if (chrome.runtime.lastError) {
-        showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
-        return;
-      }
-
-      if (response && response.assignments) {
-        extractedAssignments = response.assignments;
-        displayAssignments(extractedAssignments);
-        showStatus(`Found ${extractedAssignments.length} assignments!`, 'success');
-      } else {
-        showStatus('No assignments found', 'error');
-      }
-    });
   } catch (error) {
     showStatus('Error: ' + error.message, 'error');
   }
 });
+
+// Helper function to extract from a specific tab
+function extractFromTab(tabId) {
+  showStatus('Extracting assignments...', 'info');
+
+  chrome.tabs.sendMessage(tabId, { action: 'extractAssignments' }, (response) => {
+    if (chrome.runtime.lastError) {
+      showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
+      return;
+    }
+
+    if (response && response.assignments) {
+      extractedAssignments = response.assignments;
+      displayAssignments(extractedAssignments);
+      showStatus(`Found ${extractedAssignments.length} assignments!`, 'success');
+    } else {
+      showStatus('No assignments found', 'error');
+    }
+  });
+}
 
 // Send to server button
 document.getElementById('sendBtn').addEventListener('click', async () => {
