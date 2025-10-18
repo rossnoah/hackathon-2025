@@ -1,218 +1,276 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet, Button, View, TextInput } from 'react-native';
 import { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNotifications } from '@/hooks/useNotifications';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
-import { useNotifications, sendTestNotification } from '@/hooks/useNotifications';
+interface Assignment {
+  id: string;
+  title: string;
+  course: string;
+  date: string;
+  time: string;
+  description?: string;
+  created_at: string;
+}
 
-export default function HomeScreen() {
-  const { expoPushToken, notification } = useNotifications();
-  const [email, setEmail] = useState('');
-  const [savedEmail, setSavedEmail] = useState('');
+export default function DashboardScreen() {
+  const { expoPushToken } = useNotifications();
+  const [email, setEmail] = useState<string>('');
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Load saved email on mount
   useEffect(() => {
-    AsyncStorage.getItem('userEmail').then((storedEmail) => {
-      if (storedEmail) {
-        setEmail(storedEmail);
-        setSavedEmail(storedEmail);
-      }
-    });
+    loadUserData();
   }, []);
 
-  const handleSaveEmail = async () => {
-    if (!email || !email.includes('@')) {
-      alert('Please enter a valid email address');
-      return;
-    }
-
+  const loadUserData = async () => {
     try {
-      await AsyncStorage.setItem('userEmail', email);
-      setSavedEmail(email);
-
-      // Register email with server
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
-      await fetch(`${API_URL}/api/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: JSON.stringify({
-          email: email,
-          pushToken: expoPushToken,
-        }),
-      });
-
-      alert('Email registered successfully!');
+      const userEmail = await AsyncStorage.getItem('userEmail');
+      if (userEmail) {
+        setEmail(userEmail);
+        await fetchAssignments(userEmail);
+      }
     } catch (error) {
-      console.error('Error saving email:', error);
-      alert('Failed to save email');
+      console.error('Error loading user data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Your Email</ThemedText>
-        <ThemedText style={styles.label}>
-          Enter your email to receive assignment reminders:
-        </ThemedText>
-        <TextInput
-          style={styles.input}
-          placeholder="your.email@lafayette.edu"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        {savedEmail && (
-          <ThemedText style={styles.savedEmail}>
-            Registered: {savedEmail}
-          </ThemedText>
-        )}
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Save Email"
-            onPress={handleSaveEmail}
-          />
-        </View>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Push Notifications</ThemedText>
-        <ThemedText>
-          Your push token: {expoPushToken ? expoPushToken.substring(0, 20) + '...' : 'Getting token...'}
-        </ThemedText>
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Send Test Notification"
-            onPress={() => sendTestNotification('Hello!', 'This is a test notification from your app')}
-          />
-        </View>
-        {notification && (
-          <ThemedView style={styles.notificationContainer}>
-            <ThemedText type="defaultSemiBold">Last notification:</ThemedText>
-            <ThemedText>{notification.request.content.title}</ThemedText>
-            <ThemedText>{notification.request.content.body}</ThemedText>
-          </ThemedView>
-        )}
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const fetchAssignments = async (userEmail: string) => {
+    try {
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
+      const response = await fetch(`${API_URL}/api/assignments?email=${encodeURIComponent(userEmail)}`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
+      });
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      if (response.ok) {
+        const data = await response.json();
+        setAssignments(data.assignments || []);
+      }
+    } catch (error) {
+      console.error('Error fetching assignments:', error);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchAssignments(email);
+    setRefreshing(false);
+  };
+
+  const openChromeWebStore = () => {
+    Linking.openURL('https://github.com/rossnoah/hackathon-2025');
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      <View style={styles.header}>
+        <Text style={styles.title}>📚 My Assignments</Text>
+        <Text style={styles.email}>{email}</Text>
+      </View>
+
+      {assignments.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyEmoji}>📭</Text>
+          <Text style={styles.emptyTitle}>No assignments yet</Text>
+          <Text style={styles.emptyText}>
+            To get started, install the Chrome extension and sync your Moodle assignments.
+          </Text>
+          <View style={styles.instructionsCard}>
+            <Text style={styles.instructionsTitle}>How to sync:</Text>
+            <Text style={styles.instructionStep}>1. Install the Chrome extension</Text>
+            <Text style={styles.instructionStep}>2. Enter your email: {email}</Text>
+            <Text style={styles.instructionStep}>3. Click "Sync Assignments"</Text>
+            <Text style={styles.instructionStep}>4. Pull to refresh this screen</Text>
+          </View>
+          <Text style={styles.linkText} onPress={openChromeWebStore}>
+            Get the Chrome Extension →
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.assignmentsList}>
+          <Text style={styles.assignmentCount}>
+            {assignments.length} assignment{assignments.length !== 1 ? 's' : ''}
+          </Text>
+          {assignments.map((assignment) => (
+            <View key={assignment.id} style={styles.assignmentCard}>
+              <Text style={styles.assignmentTitle}>{assignment.title || 'Untitled'}</Text>
+              <Text style={styles.assignmentCourse}>{assignment.course || 'Unknown course'}</Text>
+              {(assignment.date || assignment.time) && (
+                <View style={styles.assignmentDateRow}>
+                  <Text style={styles.assignmentDate}>
+                    📅 {assignment.date} {assignment.time}
+                  </Text>
+                </View>
+              )}
+              {assignment.description && (
+                <Text style={styles.assignmentDescription} numberOfLines={2}>
+                  {assignment.description}
+                </Text>
+              )}
+            </View>
+          ))}
+        </View>
+      )}
+
+      {expoPushToken && (
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>✓ Push notifications enabled</Text>
+        </View>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  contentContainer: {
+    padding: 20,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-  buttonContainer: {
-    marginVertical: 10,
-  },
-  notificationContainer: {
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 10,
-    gap: 4,
-  },
-  label: {
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+  loadingText: {
+    textAlign: 'center',
+    marginTop: 100,
     fontSize: 16,
-    backgroundColor: '#fff',
-    color: '#000',
+    color: '#666',
   },
-  savedEmail: {
+  header: {
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  email: {
+    fontSize: 14,
+    color: '#666',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyEmoji: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  instructionsCard: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 12,
+    width: '100%',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  instructionsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  instructionStep: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+    paddingLeft: 8,
+  },
+  linkText: {
+    fontSize: 16,
+    color: '#007bff',
+    fontWeight: '600',
+  },
+  assignmentsList: {
+    marginBottom: 20,
+  },
+  assignmentCount: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+    fontWeight: '600',
+  },
+  assignmentCard: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#007bff',
+  },
+  assignmentTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  assignmentCourse: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  assignmentDateRow: {
+    marginBottom: 8,
+  },
+  assignmentDate: {
+    fontSize: 14,
+    color: '#007bff',
+    fontWeight: '600',
+  },
+  assignmentDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  footer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  footerText: {
     fontSize: 12,
-    marginTop: 8,
-    fontStyle: 'italic',
+    color: '#28a745',
+    fontWeight: '600',
   },
 });

@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -112,13 +113,19 @@ async function registerForPushNotificationsAsync(): Promise<string | undefined> 
 
 async function registerTokenWithServer(token: string): Promise<void> {
   try {
-    const response = await fetch(`${API_URL}/api/register-token`, {
+    // Get the user's email from storage
+    const email = await AsyncStorage.getItem('userEmail');
+
+    const response = await fetch(`${API_URL}/api/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'ngrok-skip-browser-warning': 'true',
       },
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({
+        email: email || undefined,
+        pushToken: token
+      }),
     });
 
     const data = await response.json();
