@@ -4,6 +4,51 @@ import { useScreenTime } from '@/hooks/useScreenTime';
 
 const DISTRACTION_APPS = ['TikTok', 'Instagram', 'Twitter', 'Reddit', 'YouTube'];
 
+const APP_LOGOS: { [key: string]: string } = {
+  'tiktok': '🎬',
+  'instagram': '📷',
+  'twitter': '𝕏',
+  'reddit': '🔴',
+  'youtube': '▶️',
+  'chrome': '🔵',
+  'google chrome': '🔵',
+  'chromium': '🔵',
+  'firefox': '🦊',
+  'safari': '🧭',
+  'spotify': '🟢',
+  'apple music': '🎵',
+  'youtube music': '🎵',
+  'messages': '💬',
+  'sms': '💬',
+  'telegram': '✈️',
+  'whatsapp': '💚',
+  'discord': '⚫',
+  'slack': '🟦',
+  'notion': '⬜',
+  'gmail': '📧',
+  'outlook': '📧',
+  'mail': '📧',
+  'facebook': '🔵',
+  'snapchat': '👻',
+  'pinterest': '📌',
+  'linkedin': '🔵',
+  'zoom': '🔵',
+  'teams': '🟦',
+  'skype': '🔵',
+  'dropbox': '🔵',
+  'google drive': '🔵',
+  'onedrive': '🔵',
+  'icloud': '☁️',
+  'amazon': '🟠',
+  'netflix': '🔴',
+  'hulu': '🟢',
+  'disney': '🔵',
+  'twitch': '🟣',
+  'github': '⬛',
+  'gitlab': '🟠',
+  'vscode': '🔵',
+};
+
 export default function ScreenTimeScreen() {
   const { screenTimeData, isLoading, refreshScreenTimeData } = useScreenTime();
   const [refreshing, setRefreshing] = useState(false);
@@ -28,25 +73,8 @@ export default function ScreenTimeScreen() {
   };
 
   const getAppLogo = (appName: string): string => {
-    const logoMap: { [key: string]: string } = {
-      'tiktok': '🎵',
-      'instagram': '📷',
-      'twitter': '𝕏',
-      'reddit': '🔴',
-      'youtube': '▶️',
-      'chrome': '🔵',
-      'spotify': '🟢',
-      'messages': '💬',
-      'telegram': '✈️',
-      'whatsapp': '💚',
-      'discord': '⚫',
-      'slack': '🟦',
-      'notion': '⬜',
-      'gmail': '📧',
-      'outlook': '📬',
-    };
     const key = appName.toLowerCase();
-    for (const [appKey, logo] of Object.entries(logoMap)) {
+    for (const [appKey, logo] of Object.entries(APP_LOGOS)) {
       if (key.includes(appKey)) return logo;
     }
     return '📱';
@@ -95,8 +123,8 @@ export default function ScreenTimeScreen() {
                 ]}>
                   <View style={styles.appHeader}>
                     <View style={styles.appNameContainer}>
-                      <Text style={styles.appEmoji}>{getAppLogo(app.appName)}</Text>
-                      <View>
+                      <Text style={styles.appLogo}>{getAppLogo(app.appName)}</Text>
+                      <View style={styles.appInfo}>
                         <Text style={styles.appName}>{app.appName}</Text>
                         {isDistractionApp(app.appName) && (
                           <Text style={styles.warningTag}>⚠️ Procrastination app</Text>
@@ -237,28 +265,30 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 12,
   },
-  appNameContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    flex: 1,
-    marginRight: 12,
-  },
-  appEmoji: {
-    fontSize: 24,
-    marginRight: 12,
-    marginTop: -2,
-  },
-  appName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  warningTag: {
-    fontSize: 11,
-    color: '#ff9800',
-    fontWeight: '600',
-    marginTop: 4,
-  },
+   appNameContainer: {
+     flexDirection: 'row',
+     alignItems: 'center',
+     flex: 1,
+     marginRight: 12,
+   },
+   appLogo: {
+     fontSize: 28,
+     marginRight: 12,
+   },
+   appInfo: {
+     flex: 1,
+   },
+   appName: {
+     fontSize: 16,
+     fontWeight: 'bold',
+     color: '#333',
+   },
+   warningTag: {
+     fontSize: 11,
+     color: '#ff9800',
+     fontWeight: '600',
+     marginTop: 4,
+   },
   appTime: {
     fontSize: 16,
     fontWeight: 'bold',
