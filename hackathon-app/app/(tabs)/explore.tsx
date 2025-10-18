@@ -1,52 +1,42 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, RefreshControl, SafeAreaView } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, SafeAreaView, Image } from 'react-native';
 import { useScreenTime } from '@/hooks/useScreenTime';
 
 const DISTRACTION_APPS = ['TikTok', 'Instagram', 'Twitter', 'Reddit', 'YouTube'];
 
-const APP_LOGOS: { [key: string]: string } = {
-  'tiktok': '🎬',
-  'instagram': '📷',
-  'twitter': '𝕏',
-  'reddit': '🔴',
-  'youtube': '▶️',
-  'chrome': '🔵',
-  'google chrome': '🔵',
-  'chromium': '🔵',
+// Map app names to their logo assets
+const APP_LOGO_MAP: { [key: string]: any } = {
+  'tiktok': require('@/assets/images/app-logos/tiktok.svg'),
+  'instagram': require('@/assets/images/app-logos/instagram.svg'),
+  'twitter': require('@/assets/images/app-logos/twitter.svg'),
+  'reddit': require('@/assets/images/app-logos/reddit.svg'),
+  'youtube': require('@/assets/images/app-logos/youtube.svg'),
+  'chrome': require('@/assets/images/app-logos/chrome.svg'),
+  'google chrome': require('@/assets/images/app-logos/chrome.svg'),
+  'spotify': require('@/assets/images/app-logos/spotify.svg'),
+  'telegram': require('@/assets/images/app-logos/telegram.svg'),
+  'whatsapp': require('@/assets/images/app-logos/whatsapp.svg'),
+  'discord': require('@/assets/images/app-logos/discord.svg'),
+  'slack': require('@/assets/images/app-logos/slack.svg'),
+};
+
+// Fallback emojis for apps without logos
+const FALLBACK_LOGOS: { [key: string]: string } = {
   'firefox': '🦊',
   'safari': '🧭',
-  'spotify': '🟢',
   'apple music': '🎵',
   'youtube music': '🎵',
   'messages': '💬',
   'sms': '💬',
-  'telegram': '✈️',
-  'whatsapp': '💚',
-  'discord': '⚫',
-  'slack': '🟦',
-  'notion': '⬜',
   'gmail': '📧',
   'outlook': '📧',
-  'mail': '📧',
-  'facebook': '🔵',
-  'snapchat': '👻',
-  'pinterest': '📌',
-  'linkedin': '🔵',
+  'notion': '⬜',
   'zoom': '🔵',
   'teams': '🟦',
-  'skype': '🔵',
-  'dropbox': '🔵',
-  'google drive': '🔵',
-  'onedrive': '🔵',
-  'icloud': '☁️',
-  'amazon': '🟠',
+  'facebook': '📘',
   'netflix': '🔴',
   'hulu': '🟢',
-  'disney': '🔵',
   'twitch': '🟣',
-  'github': '⬛',
-  'gitlab': '🟠',
-  'vscode': '🔵',
 };
 
 export default function ScreenTimeScreen() {
@@ -72,12 +62,30 @@ export default function ScreenTimeScreen() {
     return DISTRACTION_APPS.some(app => appName.toLowerCase().includes(app.toLowerCase()));
   };
 
-  const getAppLogo = (appName: string): string => {
+  const getAppLogoSource = (appName: string): { type: 'image' | 'emoji'; value: any } => {
     const key = appName.toLowerCase();
-    for (const [appKey, logo] of Object.entries(APP_LOGOS)) {
-      if (key.includes(appKey)) return logo;
+    
+    // Check for logo files
+    for (const [appKey, logoSource] of Object.entries(APP_LOGO_MAP)) {
+      if (key.includes(appKey)) {
+        return {
+          type: 'image',
+          value: logoSource,
+        };
+      }
     }
-    return '📱';
+
+    // Check for fallback emojis
+    for (const [appKey, emoji] of Object.entries(FALLBACK_LOGOS)) {
+      if (key.includes(appKey)) {
+        return {
+          type: 'emoji',
+          value: emoji,
+        };
+      }
+    }
+
+    return { type: 'emoji', value: '📱' };
   };
 
   if (isLoading) {
@@ -123,7 +131,19 @@ export default function ScreenTimeScreen() {
                 ]}>
                   <View style={styles.appHeader}>
                     <View style={styles.appNameContainer}>
-                      <Text style={styles.appLogo}>{getAppLogo(app.appName)}</Text>
+                      {(() => {
+                        const logoSource = getAppLogoSource(app.appName);
+                        if (logoSource.type === 'image') {
+                          return (
+                            <Image
+                              source={require(`@/assets/images/app-logos/${logoSource.value}.svg`)}
+                              style={styles.appLogoImage}
+                            />
+                          );
+                        } else {
+                          return <Text style={styles.appLogoEmoji}>{logoSource.value}</Text>;
+                        }
+                      })()}
                       <View style={styles.appInfo}>
                         <Text style={styles.appName}>{app.appName}</Text>
                         {isDistractionApp(app.appName) && (
@@ -271,12 +291,21 @@ const styles = StyleSheet.create({
      flex: 1,
      marginRight: 12,
    },
-   appLogo: {
+   appLogoImage: {
+     width: 40,
+     height: 40,
+     borderRadius: 8,
+     marginRight: 12,
+   },
+   appLogoEmoji: {
      fontSize: 28,
      marginRight: 12,
+     width: 40,
+     textAlign: 'center',
    },
    appInfo: {
      flex: 1,
+     justifyContent: 'center',
    },
    appName: {
      fontSize: 16,
