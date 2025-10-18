@@ -75,68 +75,10 @@ function displayAssignments(assignments) {
   `).join('');
 
   listDiv.classList.remove('hidden');
-  document.getElementById('sendBtn').disabled = false;
 }
 
-// Extract assignments button
-document.getElementById('extractBtn').addEventListener('click', async () => {
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    const moodleUrl = 'https://moodle.lafayette.edu/calendar/view.php?view=upcoming&course=1';
-
-    // Check if we're already on the Moodle calendar page
-    if (!tab.url.includes('moodle.lafayette.edu/calendar')) {
-      showStatus('Opening Moodle calendar...', 'info');
-
-      // Open the Moodle calendar in a new tab
-      chrome.tabs.create({ url: moodleUrl }, (newTab) => {
-        // Wait for the page to load, then extract
-        chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-          if (tabId === newTab.id && info.status === 'complete') {
-            chrome.tabs.onUpdated.removeListener(listener);
-
-            // Wait a bit more for content to render
-            setTimeout(() => {
-              extractFromTab(newTab.id);
-            }, 1000);
-          }
-        });
-      });
-    } else {
-      // Already on the page, extract immediately
-      extractFromTab(tab.id);
-    }
-  } catch (error) {
-    showStatus('Error: ' + error.message, 'error');
-  }
-});
-
-// Helper function to extract from a specific tab
-function extractFromTab(tabId) {
-  showStatus('Extracting assignments...', 'info');
-
-  chrome.tabs.sendMessage(tabId, { action: 'extractAssignments' }, (response) => {
-    if (chrome.runtime.lastError) {
-      showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
-      console.error('Chrome runtime error:', chrome.runtime.lastError);
-      return;
-    }
-
-    if (response && response.assignments) {
-      extractedAssignments = response.assignments;
-      console.log('✅ Extracted assignments:', JSON.stringify(extractedAssignments, null, 2));
-      console.log(`Total assignments: ${extractedAssignments.length}`);
-      displayAssignments(extractedAssignments);
-      showStatus(`Found ${extractedAssignments.length} assignments!`, 'success');
-    } else {
-      showStatus('No assignments found', 'error');
-      console.warn('No assignments in response:', response);
-    }
-  });
-}
-
-// Send to server button
-document.getElementById('sendBtn').addEventListener('click', async () => {
+// Sync assignments button - extract and send in one action
+document.getElementById('syncBtn').addEventListener('click', async () => {
   const serverUrl = document.getElementById('serverUrl').value;
   const email = document.getElementById('email').value;
 
@@ -150,53 +92,107 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
     return;
   }
 
-  if (extractedAssignments.length === 0) {
-    showStatus('No assignments to send', 'error');
-    return;
-  }
-
-  showStatus('Sending to server...', 'info');
-
   try {
-    const response = await fetch(`${serverUrl}/api/assignments`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true',
-      },
-      body: JSON.stringify({
-        email,
-        assignments: extractedAssignments,
-        extractedAt: new Date().toISOString(),
-      }),
-    });
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const moodleUrl = 'https://moodle.lafayette.edu/calendar/view.php?view=upcoming&course=1';
 
-    const data = await response.json();
+    // Check if we're already on the Moodle calendar page
+    if (!tab.url.includes('moodle.lafayette.edu/calendar')) {
+      showStatus('Opening Moodle calendar...', 'info');
 
-    if (response.ok) {
-      showStatus(`Successfully sent ${extractedAssignments.length} assignments!`, 'success');
+      // Open the Moodle calendar in a new tab
+      chrome.tabs.create({ url: moodleUrl }, (newTab) => {
+        // Wait for the page to load, then extract and send
+        chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
+          if (tabId === newTab.id && info.status === 'complete') {
+            chrome.tabs.onUpdated.removeListener(listener);
 
-      // Also send a notification about new assignments
-      await fetch(`${serverUrl}/api/send-notification`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: JSON.stringify({
-          email,
-          title: 'Assignments Updated',
-          body: `${extractedAssignments.length} assignments synced from Moodle`,
-          data: { type: 'assignments', count: extractedAssignments.length },
-        }),
+            // Wait a bit more for content to render
+            setTimeout(() => {
+              extractAndSend(newTab.id, serverUrl, email);
+            }, 1000);
+          }
+        });
       });
     } else {
-      showStatus('Error: ' + (data.error || 'Unknown error'), 'error');
+      // Already on the page, extract and send immediately
+      extractAndSend(tab.id, serverUrl, email);
     }
   } catch (error) {
-    showStatus('Network error: ' + error.message, 'error');
+    showStatus('Error: ' + error.message, 'error');
   }
 });
+
+// Helper function to extract and send from a specific tab
+async function extractAndSend(tabId, serverUrl, email) {
+  showStatus('Extracting assignments...', 'info');
+
+  chrome.tabs.sendMessage(tabId, { action: 'extractAssignments' }, async (response) => {
+    if (chrome.runtime.lastError) {
+      showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
+      console.error('Chrome runtime error:', chrome.runtime.lastError);
+      return;
+    }
+
+    if (response && response.assignments) {
+      extractedAssignments = response.assignments;
+      console.log('✅ Extracted assignments:', JSON.stringify(extractedAssignments, null, 2));
+      console.log(`Total assignments: ${extractedAssignments.length}`);
+      displayAssignments(extractedAssignments);
+
+      if (extractedAssignments.length === 0) {
+        showStatus('No assignments found', 'info');
+        return;
+      }
+
+      // Automatically send to server
+      showStatus('Sending to server...', 'info');
+
+      try {
+        const response = await fetch(`${serverUrl}/api/assignments`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true',
+          },
+          body: JSON.stringify({
+            email,
+            assignments: extractedAssignments,
+            extractedAt: new Date().toISOString(),
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showStatus(`Successfully synced ${extractedAssignments.length} assignments!`, 'success');
+
+          // Also send a notification about new assignments
+          await fetch(`${serverUrl}/api/send-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true',
+            },
+            body: JSON.stringify({
+              email,
+              title: 'Assignments Updated',
+              body: `${extractedAssignments.length} assignments synced from Moodle`,
+              data: { type: 'assignments', count: extractedAssignments.length },
+            }),
+          });
+        } else {
+          showStatus('Error: ' + (data.error || 'Unknown error'), 'error');
+        }
+      } catch (error) {
+        showStatus('Network error: ' + error.message, 'error');
+      }
+    } else {
+      showStatus('No assignments found', 'error');
+      console.warn('No assignments in response:', response);
+    }
+  });
+}
 
 // Load previously extracted assignments if available
 chrome.storage.local.get(['lastExtractedAssignments'], (result) => {
