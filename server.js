@@ -43,9 +43,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-// Health check endpoint
+// Serve dashboard as home page
 app.get("/", (req, res) => {
-	res.json({ message: "Notification server is running" });
+	res.sendFile(path.join(__dirname, "public", "dashboard.html"));
 });
 
 // Register or update user
