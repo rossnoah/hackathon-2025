@@ -1,42 +1,102 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, RefreshControl, SafeAreaView, Image } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, SafeAreaView } from 'react-native';
 import { useScreenTime } from '@/hooks/useScreenTime';
 
 const DISTRACTION_APPS = ['TikTok', 'Instagram', 'Twitter', 'Reddit', 'YouTube'];
 
-// Map app names to their logo assets
-const APP_LOGO_MAP: { [key: string]: any } = {
-  'tiktok': require('@/assets/images/app-logos/tiktok.svg'),
-  'instagram': require('@/assets/images/app-logos/instagram.svg'),
-  'twitter': require('@/assets/images/app-logos/twitter.svg'),
-  'reddit': require('@/assets/images/app-logos/reddit.svg'),
-  'youtube': require('@/assets/images/app-logos/youtube.svg'),
-  'chrome': require('@/assets/images/app-logos/chrome.svg'),
-  'google chrome': require('@/assets/images/app-logos/chrome.svg'),
-  'spotify': require('@/assets/images/app-logos/spotify.svg'),
-  'telegram': require('@/assets/images/app-logos/telegram.svg'),
-  'whatsapp': require('@/assets/images/app-logos/whatsapp.svg'),
-  'discord': require('@/assets/images/app-logos/discord.svg'),
-  'slack': require('@/assets/images/app-logos/slack.svg'),
-};
-
-// Fallback emojis for apps without logos
-const FALLBACK_LOGOS: { [key: string]: string } = {
-  'firefox': '🦊',
-  'safari': '🧭',
-  'apple music': '🎵',
-  'youtube music': '🎵',
+// Comprehensive app logo mapping with proper brand colors and symbols
+const APP_LOGOS: { [key: string]: string } = {
+  // Social Media
+  'tiktok': '🎬',
+  'instagram': '📷',
+  'twitter': '𝕏',
+  'x.com': '𝕏',
+  'reddit': '🔴',
+  'youtube': '▶️',
+  'youtube tv': '▶️',
+  'facebook': '👤',
+  'snapchat': '👻',
+  'pinterest': '📌',
+  'linkedin': '🔗',
+  'twitch': '🟣',
+  
+  // Messaging
   'messages': '💬',
   'sms': '💬',
-  'gmail': '📧',
-  'outlook': '📧',
-  'notion': '⬜',
-  'zoom': '🔵',
-  'teams': '🟦',
-  'facebook': '📘',
+  'telegram': '✈️',
+  'whatsapp': '💚',
+  'discord': '⚫',
+  'slack': '🟦',
+  'skype': '🔵',
+  
+  // Browsers
+  'chrome': '🔵',
+  'google chrome': '🔵',
+  'chromium': '🔵',
+  'firefox': '🦊',
+  'safari': '🧭',
+  'edge': '🔵',
+  'opera': '🔴',
+  
+  // Music & Entertainment
+  'spotify': '🟢',
+  'apple music': '🎵',
+  'youtube music': '🎵',
   'netflix': '🔴',
   'hulu': '🟢',
-  'twitch': '🟣',
+  'disney': '🔵',
+  'amazon prime': '🟠',
+  
+  // Productivity
+  'notion': '⬜',
+  'gmail': '📧',
+  'outlook': '📧',
+  'mail': '📧',
+  'calendar': '📅',
+  'drive': '🔵',
+  'google drive': '🔵',
+  'onedrive': '🔵',
+  'dropbox': '🔵',
+  'icloud': '☁️',
+  
+  // Communication
+  'zoom': '🔵',
+  'teams': '🟦',
+  'google meet': '🔵',
+  'webex': '🔵',
+  
+  // News & Reading
+  'medium': '⬛',
+  'news': '📰',
+  'pocket': '🔴',
+  'kindle': '⬛',
+  
+  // Work & Dev
+  'github': '⬛',
+  'gitlab': '🟠',
+  'bitbucket': '🔵',
+  'vscode': '🔵',
+  'jira': '🔵',
+  'trello': '🔵',
+  
+  // Shopping
+  'amazon': '🟠',
+  'ebay': '🔴',
+  'aliexpress': '🔴',
+  'shopify': '🟢',
+  
+  // Finance
+  'paypal': '🔵',
+  'stripe': '🔵',
+  'square': '🔵',
+  'venmo': '🔵',
+  'robinhood': '🟢',
+  
+  // Health & Fitness
+  'fitness': '💪',
+  'health': '❤️',
+  'strava': '🟠',
+  'peloton': '⬛',
 };
 
 export default function ScreenTimeScreen() {
@@ -62,30 +122,12 @@ export default function ScreenTimeScreen() {
     return DISTRACTION_APPS.some(app => appName.toLowerCase().includes(app.toLowerCase()));
   };
 
-  const getAppLogoSource = (appName: string): { type: 'image' | 'emoji'; value: any } => {
+  const getAppLogo = (appName: string): string => {
     const key = appName.toLowerCase();
-    
-    // Check for logo files
-    for (const [appKey, logoSource] of Object.entries(APP_LOGO_MAP)) {
-      if (key.includes(appKey)) {
-        return {
-          type: 'image',
-          value: logoSource,
-        };
-      }
+    for (const [appKey, logo] of Object.entries(APP_LOGOS)) {
+      if (key.includes(appKey)) return logo;
     }
-
-    // Check for fallback emojis
-    for (const [appKey, emoji] of Object.entries(FALLBACK_LOGOS)) {
-      if (key.includes(appKey)) {
-        return {
-          type: 'emoji',
-          value: emoji,
-        };
-      }
-    }
-
-    return { type: 'emoji', value: '📱' };
+    return '📱';
   };
 
   if (isLoading) {
@@ -131,19 +173,7 @@ export default function ScreenTimeScreen() {
                 ]}>
                   <View style={styles.appHeader}>
                     <View style={styles.appNameContainer}>
-                      {(() => {
-                        const logoSource = getAppLogoSource(app.appName);
-                        if (logoSource.type === 'image') {
-                          return (
-                            <Image
-                              source={require(`@/assets/images/app-logos/${logoSource.value}.svg`)}
-                              style={styles.appLogoImage}
-                            />
-                          );
-                        } else {
-                          return <Text style={styles.appLogoEmoji}>{logoSource.value}</Text>;
-                        }
-                      })()}
+                      <Text style={styles.appLogo}>{getAppLogo(app.appName)}</Text>
                       <View style={styles.appInfo}>
                         <Text style={styles.appName}>{app.appName}</Text>
                         {isDistractionApp(app.appName) && (
@@ -291,14 +321,8 @@ const styles = StyleSheet.create({
      flex: 1,
      marginRight: 12,
    },
-   appLogoImage: {
-     width: 40,
-     height: 40,
-     borderRadius: 8,
-     marginRight: 12,
-   },
-   appLogoEmoji: {
-     fontSize: 28,
+   appLogo: {
+     fontSize: 32,
      marginRight: 12,
      width: 40,
      textAlign: 'center',
