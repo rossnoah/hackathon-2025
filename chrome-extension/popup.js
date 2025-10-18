@@ -87,15 +87,19 @@ function extractFromTab(tabId) {
   chrome.tabs.sendMessage(tabId, { action: 'extractAssignments' }, (response) => {
     if (chrome.runtime.lastError) {
       showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
+      console.error('Chrome runtime error:', chrome.runtime.lastError);
       return;
     }
 
     if (response && response.assignments) {
       extractedAssignments = response.assignments;
+      console.log('✅ Extracted assignments:', JSON.stringify(extractedAssignments, null, 2));
+      console.log(`Total assignments: ${extractedAssignments.length}`);
       displayAssignments(extractedAssignments);
       showStatus(`Found ${extractedAssignments.length} assignments!`, 'success');
     } else {
       showStatus('No assignments found', 'error');
+      console.warn('No assignments in response:', response);
     }
   });
 }
