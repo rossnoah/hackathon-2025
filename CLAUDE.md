@@ -118,6 +118,17 @@ CREATE TABLE assignments (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (email) REFERENCES users(email)
 );
+
+-- Screentime tracking table
+CREATE TABLE screentime (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT,
+  app_usage TEXT,
+  total_usage_minutes INTEGER,
+  date TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (email) REFERENCES users(email)
+);
 ```
 
 **API Endpoints**:
@@ -130,6 +141,8 @@ CREATE TABLE assignments (
 | GET | `/api/users` | Get all registered users |
 | POST | `/api/assignments` | Store assignments for a user (replaces old ones) |
 | GET | `/api/assignments?email=X` | Get assignments for user |
+| POST | `/api/screentime` | Store user's app usage data |
+| GET | `/api/insights/:email` | Get AI insights about procrastination + personalized message |
 
 **AI-Powered Notifications**:
 ```javascript
@@ -153,6 +166,8 @@ cron.schedule('*/1 * * * *', async () => {
 - "Still working on that Philosophy essay? The deadline won't extend itself... 📝"
 - "3 assignments due soon! Let's knock them out before they multiply 💪"
 - "I'm not mad, just disappointed you haven't checked your assignments yet 📚"
+- "If scrolling was an Olympic sport, you'd already have the gold, but unfortunately, TikTok won't help you titrate your way out of that chemistry lab due in two days."
+- "Ah, yes, the ancient philosophers Plato and Aristotle, famous for their TikTok battles. Pro tip: your Philosophy Essay will appreciate more thought than your latest video scroll!"
 
 ### 3. React Native Mobile App (`/hackathon-app/`)
 
@@ -191,12 +206,23 @@ app/
    - Registers with server (`POST /api/register`)
    - Routes to dashboard
 
-3. **Dashboard** → `(tabs)/index.tsx`
-   - Fetches assignments from server
-   - Displays in scrollable list with cards
-   - Pull-to-refresh to sync
-   - Empty state if no assignments (shows extension instructions)
-   - Shows push token status at bottom
+3. **Dashboard** → `(tabs)/index.tsx` - **Redesigned with AI Insights**
+    - Shows social media percentage (e.g., "31% of your day")
+    - Displays AI-generated guilt/motivation message about procrastination
+    - Shows top 3 apps used with time spent
+    - Displays top 3 urgent assignments in red ("You should really be doing these:")
+    - Lists all assignments below for reference
+    - Pull-to-refresh to update insights
+    - Shows push token status at bottom
+
+4. **Screen Time Tab** → `(tabs)/explore.tsx` - **Enhanced with Visuals**
+    - Shows total screen time for the day
+    - App emoji indicators (🎬 TikTok, 📸 Instagram, etc.)
+    - Warning badges for distraction apps
+    - Color-coded app cards (orange/red for procrastination apps)
+    - Progress bars showing usage percentage
+    - "Send Screen Time to AI" button
+    - Info card explaining the feature
 
 **Key Files**:
 
@@ -538,23 +564,52 @@ eas submit --platform android
 4. Fill out store listing
 5. Submit for review
 
+## New Features: Screentime Insights Dashboard
+
+### Overview
+The app now includes an AI-powered procrastination detection system that shows users:
+1. **How much time they've spent on social media** (percentage of day)
+2. **AI-generated guilt messages** personalized to their apps and assignments
+3. **Smart recommendations** to focus on urgent work
+4. **Contextual notifications** that call out specific procrastination apps
+
+### How It Works
+1. User tracks screen time in the app
+2. Clicks "Send Screen Time to AI" in Screen Time tab
+3. Data is stored in the database
+4. When user refreshes home screen, `/api/insights/:email` endpoint:
+   - Fetches latest screentime data
+   - Gets user's upcoming assignments
+   - Uses GPT-4o to generate personalized message
+   - Returns social media %, top apps, and roasting message
+5. Dashboard displays insights with beautiful UI
+6. Cron job later uses same screentime data for contextual push notifications
+
+### Example Flow
+```
+User spent: 31% on TikTok + Instagram today
+Assignments: Philosophy Essay (due tomorrow), Calculus (due today)
+AI Message: "If scrolling was an Olympic sport, you'd already have gold,
+but unfortunately, TikTok won't help you finish that Calculus assignment!"
+```
+
 ## Project Stats
 
 **Lines of Code** (approx):
-- Server: ~330 lines
-- Mobile App: ~600 lines
+- Server: ~500 lines (+170 new for insights/screentime)
+- Mobile App: ~850 lines (+250 new for dashboard redesign)
 - Chrome Extension: ~210 lines
 - Dashboard: ~420 lines
-- **Total**: ~1,560 lines
+- **Total**: ~1,980 lines
 
 **Technologies Used**: 15
-- Node.js, Express, SQLite, OpenAI, Expo
+- Node.js, Express, SQLite, OpenAI (GPT-4o), Expo
 - React Native, TypeScript, AsyncStorage
 - Chrome Extensions API, node-cron
 - better-sqlite3, expo-notifications
 - ngrok, dotenv, CORS
 
-**Time to Build**: Hackathon project
+**Time to Build**: Hackathon project (with real-time AI integration)
 
 ## Credits
 
@@ -566,6 +621,14 @@ MIT (or whatever you want - it's a hackathon project!)
 
 ---
 
-**Last Updated**: 2025-01-18
+**Last Updated**: 2025-10-18
+
+### Recent Updates (Oct 18, 2025)
+- ✨ Added Screentime Insights Dashboard with AI-generated messages
+- 🎨 Completely redesigned home dashboard to show procrastination data first
+- 📊 Enhanced Screen Time tab with visual indicators and warnings
+- 🤖 Integrated GPT-4o for contextual, guilt-inducing reminders
+- 💾 Added database table for screentime tracking
+- 🔄 Integrated screentime context into push notifications
 
 For questions or issues, check the GitHub repository.
