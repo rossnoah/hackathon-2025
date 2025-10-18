@@ -1,5 +1,7 @@
 # Hackathon 2025 - Assignment Tracker System
 
+Noah Ross, Gia Mazza, Jasmina Frederico, and Alex Villalba
+
 A complete assignment tracking system that syncs Moodle assignments to a mobile app with AI-powered push notifications. Built with React Native (Expo), Express.js, Chrome Extension, and OpenAI GPT-4o.
 
 ## Project Structure
