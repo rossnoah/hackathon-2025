@@ -7,6 +7,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
 
+export interface AppUsage {
+  appName: string;
+  packageName: string;
+  usageMinutes: number;
+  lastUsed?: string;
+}
+
 // Configure how notifications are handled when the app is in the foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -25,46 +32,48 @@ export interface NotificationData {
 }
 
 export function useNotifications() {
-  const [expoPushToken, setExpoPushToken] = useState<string | undefined>(undefined);
-  const [notification, setNotification] = useState<Notifications.Notification | undefined>(undefined);
-  const notificationListener = useRef<Notifications.EventSubscription | undefined>(undefined);
-  const responseListener = useRef<Notifications.EventSubscription | undefined>(undefined);
+   const [expoPushToken, setExpoPushToken] = useState<string | undefined>(undefined);
+   const [notification, setNotification] = useState<Notifications.Notification | undefined>(undefined);
+   const notificationListener = useRef<Notifications.EventSubscription | undefined>(undefined);
+   const responseListener = useRef<Notifications.EventSubscription | undefined>(undefined);
 
-  useEffect(() => {
-    // Register for push notifications
-    registerForPushNotificationsAsync().then(token => {
-      setExpoPushToken(token);
-      if (token) {
-        // Register token with your server
-        registerTokenWithServer(token);
-      }
-    });
+   useEffect(() => {
+     // Register for push notifications and send screentime data
+     registerForPushNotificationsAsync().then(token => {
+       setExpoPushToken(token);
+       if (token) {
+         registerTokenWithServer(token);
+       }
+     });
 
-    // Listen for notifications received while app is open
-    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      setNotification(notification);
-    });
+     // Auto-send screentime data when app opens
+     sendScreentimeDataOnAppOpen();
 
-    // Listen for user interactions with notifications
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('Notification response:', response);
-    });
+     // Listen for notifications received while app is open
+     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+       setNotification(notification);
+     });
 
-    return () => {
-      if (notificationListener.current) {
-        notificationListener.current.remove();
-      }
-      if (responseListener.current) {
-        responseListener.current.remove();
-      }
-    };
-  }, []);
+     // Listen for user interactions with notifications
+     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+       console.log('Notification response:', response);
+     });
 
-  return {
-    expoPushToken,
-    notification,
-  };
-}
+     return () => {
+       if (notificationListener.current) {
+         notificationListener.current.remove();
+       }
+       if (responseListener.current) {
+         responseListener.current.remove();
+       }
+     };
+   }, []);
+
+   return {
+     expoPushToken,
+     notification,
+   };
+ }
 
 async function registerForPushNotificationsAsync(): Promise<string | undefined> {
   let token: string | undefined;
@@ -137,19 +146,54 @@ async function registerTokenWithServer(token: string): Promise<void> {
 
 // Helper function to send a test notification from the app
 export async function sendTestNotification(title: string, body: string, data?: Record<string, unknown>): Promise<void> {
-  try {
-    const response = await fetch(`${API_URL}/api/send-notification`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true',
-      },
-      body: JSON.stringify({ title, body, data }),
-    });
+   try {
+     const response = await fetch(`${API_URL}/api/send-notification`, {
+       method: 'POST',
+       headers: {
+         'Content-Type': 'application/json',
+         'ngrok-skip-browser-warning': 'true',
+       },
+       body: JSON.stringify({ title, body, data }),
+     });
 
-    const result = await response.json();
-    console.log('Notification sent:', result);
-  } catch (error) {
-    console.error('Error sending notification:', error);
-  }
-}
+     const result = await response.json();
+     console.log('Notification sent:', result);
+   } catch (error) {
+     console.error('Error sending notification:', error);
+   }
+ }
+
+// Auto-send screentime data when app opens
+async function sendScreentimeDataOnAppOpen(): Promise<void> {
+   try {
+     const email = await AsyncStorage.getItem('userEmail');
+     if (!email) return;
+
+     const today = new Date().toISOString().split('T')[0];
+     const storedDataKey = `screentime_${today}`;
+     const storedData = await AsyncStorage.getItem(storedDataKey);
+
+     if (!storedData) return;
+
+     const screenTimeData = JSON.parse(storedData);
+
+     const response = await fetch(`${API_URL}/api/screentime`, {
+       method: 'POST',
+       headers: {
+         'Content-Type': 'application/json',
+         'ngrok-skip-browser-warning': 'true',
+       },
+       body: JSON.stringify({
+         email,
+         appUsage: screenTimeData.appUsage,
+         date: screenTimeData.date,
+       }),
+     });
+
+     if (response.ok) {
+       console.log('Screentime data sent to server on app open');
+     }
+   } catch (error) {
+     console.error('Error sending screentime data on app open:', error);
+   }
+ }

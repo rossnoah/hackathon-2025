@@ -1,55 +1,17 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, RefreshControl, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, SafeAreaView } from 'react-native';
 import { useScreenTime } from '@/hooks/useScreenTime';
 
 const DISTRACTION_APPS = ['TikTok', 'Instagram', 'Twitter', 'Reddit', 'YouTube'];
 
 export default function ScreenTimeScreen() {
-  const [email, setEmail] = useState<string>('');
-  const { screenTimeData, isLoading, refreshScreenTimeData, sendScreenTimeToServer } = useScreenTime();
+  const { screenTimeData, isLoading, refreshScreenTimeData } = useScreenTime();
   const [refreshing, setRefreshing] = useState(false);
-  const [sending, setSending] = useState(false);
-
-  useEffect(() => {
-    loadUserEmail();
-  }, []);
-
-  const loadUserEmail = async () => {
-    try {
-      const userEmail = await AsyncStorage.getItem('userEmail');
-      if (userEmail) {
-        setEmail(userEmail);
-      }
-    } catch (error) {
-      console.error('Error loading user email:', error);
-    }
-  };
 
   const onRefresh = async () => {
     setRefreshing(true);
     await refreshScreenTimeData();
     setRefreshing(false);
-  };
-
-  const handleSendToServer = async () => {
-    if (!email) {
-      Alert.alert('Error', 'No email found. Please complete onboarding.');
-      return;
-    }
-
-    setSending(true);
-    try {
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
-      const result = await sendScreenTimeToServer(email, API_URL);
-      Alert.alert('✨ Data Sent', 'Your screen time data has been shared with the AI notification system. Expect smarter, more roasting reminders!');
-      console.log('Server response:', result);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to send screen time data to server');
-      console.error('Error sending screen time:', error);
-    } finally {
-      setSending(false);
-    }
   };
 
   const formatMinutes = (minutes: number): string => {
@@ -65,20 +27,27 @@ export default function ScreenTimeScreen() {
     return DISTRACTION_APPS.some(app => appName.toLowerCase().includes(app.toLowerCase()));
   };
 
-  const getAppEmoji = (appName: string): string => {
-    const emojiMap: { [key: string]: string } = {
-      'tiktok': '🎬',
-      'instagram': '📸',
+  const getAppLogo = (appName: string): string => {
+    const logoMap: { [key: string]: string } = {
+      'tiktok': '🎵',
+      'instagram': '📷',
       'twitter': '𝕏',
-      'reddit': '🤖',
-      'youtube': '🎥',
-      'chrome': '🌐',
-      'spotify': '🎵',
+      'reddit': '🔴',
+      'youtube': '▶️',
+      'chrome': '🔵',
+      'spotify': '🟢',
       'messages': '💬',
+      'telegram': '✈️',
+      'whatsapp': '💚',
+      'discord': '⚫',
+      'slack': '🟦',
+      'notion': '⬜',
+      'gmail': '📧',
+      'outlook': '📬',
     };
     const key = appName.toLowerCase();
-    for (const [appKey, emoji] of Object.entries(emojiMap)) {
-      if (key.includes(appKey)) return emoji;
+    for (const [appKey, logo] of Object.entries(logoMap)) {
+      if (key.includes(appKey)) return logo;
     }
     return '📱';
   };
@@ -117,25 +86,6 @@ export default function ScreenTimeScreen() {
               </Text>
             </View>
 
-            <View style={styles.infoCard}>
-              <Text style={styles.infoIcon}>💡</Text>
-              <Text style={styles.infoText}>
-                Share your screen time data with the server to receive personalized reminders about your procrastination habits!
-              </Text>
-            </View>
-
-            <View style={styles.sendButtonContainer}>
-              <TouchableOpacity
-                style={[styles.sendButton, sending && styles.sendButtonDisabled]}
-                onPress={handleSendToServer}
-                disabled={sending}
-              >
-                <Text style={styles.sendButtonText}>
-                  {sending ? 'Sending...' : '📤 Send Screen Time to AI'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
             <View style={styles.appsSection}>
               <Text style={styles.sectionTitle}>App Breakdown</Text>
               {screenTimeData.appUsage.map((app, index) => (
@@ -145,7 +95,7 @@ export default function ScreenTimeScreen() {
                 ]}>
                   <View style={styles.appHeader}>
                     <View style={styles.appNameContainer}>
-                      <Text style={styles.appEmoji}>{getAppEmoji(app.appName)}</Text>
+                      <Text style={styles.appEmoji}>{getAppLogo(app.appName)}</Text>
                       <View>
                         <Text style={styles.appName}>{app.appName}</Text>
                         {isDistractionApp(app.appName) && (
@@ -180,11 +130,7 @@ export default function ScreenTimeScreen() {
               ))}
             </View>
 
-            <View style={styles.disclaimer}>
-              <Text style={styles.disclaimerText}>
-                💬 This mock data will help train the AI to give you more personalized and hilarious reminders about your assignments!
-              </Text>
-            </View>
+
           </>
         )}
       </ScrollView>
@@ -258,50 +204,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     opacity: 0.9,
   },
-  infoCard: {
-    backgroundColor: '#e7f3ff',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    borderLeftWidth: 4,
-    borderLeftColor: '#007bff',
-  },
-  infoIcon: {
-    fontSize: 20,
-    marginRight: 12,
-    marginTop: 2,
-  },
-  infoText: {
-    fontSize: 13,
-    color: '#0056b3',
-    flex: 1,
-    lineHeight: 18,
-  },
-  sendButtonContainer: {
-    marginBottom: 24,
-  },
-  sendButton: {
-    backgroundColor: '#28a745',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#6c757d',
-    opacity: 0.6,
-  },
-  sendButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+
   appsSection: {
     marginBottom: 20,
   },
@@ -385,23 +288,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#007bff',
     borderRadius: 3,
   },
-  progressBarWarning: {
-    backgroundColor: '#ff9800',
-  },
-  disclaimer: {
-    backgroundColor: '#f0f4ff',
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 8,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#6366f1',
-  },
-  disclaimerText: {
-    fontSize: 13,
-    color: '#4338ca',
-    textAlign: 'center',
-    lineHeight: 20,
-    fontWeight: '500',
-  },
-});
+   progressBarWarning: {
+     backgroundColor: '#ff9800',
+   },
+ });

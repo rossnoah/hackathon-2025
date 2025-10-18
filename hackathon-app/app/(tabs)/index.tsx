@@ -157,27 +157,25 @@ export default function DashboardScreen() {
               <View style={styles.assignmentSection}>
                 <Text style={styles.sectionTitle}>You should really be doing these:</Text>
                 <View style={styles.assignmentsContainer}>
-                  {assignments.slice(0, 3).map((assignment) => (
-                    <View key={assignment.id} style={styles.miniAssignmentCard}>
-                      <View style={styles.miniAssignmentHeader}>
-                        <Text style={styles.miniAssignmentTitle} numberOfLines={1}>
-                          {assignment.title || 'Untitled'}
+                  {assignments.map((assignment) => (
+                    <View key={assignment.id} style={styles.assignmentCard}>
+                      <Text style={styles.assignmentTitle}>{assignment.title || 'Untitled'}</Text>
+                      <Text style={styles.assignmentCourse}>{assignment.course || 'Unknown course'}</Text>
+                      {(assignment.date || assignment.time) && (
+                        <View style={styles.assignmentDateRow}>
+                          <Text style={styles.assignmentDate}>
+                            📅 {assignment.date} {assignment.time}
+                          </Text>
+                        </View>
+                      )}
+                      {assignment.description && (
+                        <Text style={styles.assignmentDescription}>
+                          {assignment.description}
                         </Text>
-                        <Text style={styles.miniAssignmentDate}>
-                          {assignment.date}
-                        </Text>
-                      </View>
-                      <Text style={styles.miniAssignmentCourse} numberOfLines={1}>
-                        {assignment.course}
-                      </Text>
+                      )}
                     </View>
                   ))}
                 </View>
-                {assignments.length > 3 && (
-                  <Text style={styles.moreAssignments}>
-                    +{assignments.length - 3} more assignment{assignments.length - 3 !== 1 ? 's' : ''}
-                  </Text>
-                )}
               </View>
             )}
           </>
@@ -188,54 +186,30 @@ export default function DashboardScreen() {
             <Text style={styles.noDataEmoji}>📱</Text>
             <Text style={styles.noDataTitle}>No screen time data yet</Text>
             <Text style={styles.noDataText}>
-              Go to the Screen Time tab and share your app usage to get AI-generated insights and personalized reminders about your procrastination habits!
+              Go to the Screen Time tab to share your app usage and get AI-generated insights about your procrastination habits!
             </Text>
           </View>
         )}
 
-        <View style={styles.fullAssignmentsSection}>
-          <Text style={styles.fullSectionTitle}>All Assignments</Text>
-          {assignments.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>📭</Text>
-              <Text style={styles.emptyTitle}>No assignments yet</Text>
-              <Text style={styles.emptyText}>
-                To get started, install the Chrome extension and sync your Moodle assignments.
-              </Text>
-              <View style={styles.instructionsCard}>
-                <Text style={styles.instructionsTitle}>How to sync:</Text>
-                <Text style={styles.instructionStep}>1. Install the Chrome extension</Text>
-                <Text style={styles.instructionStep}>2. Enter your email: {email}</Text>
-                <Text style={styles.instructionStep}>3. Click "Sync Assignments"</Text>
-                <Text style={styles.instructionStep}>4. Pull to refresh this screen</Text>
-              </View>
-              <Text style={styles.linkText} onPress={openChromeWebStore}>
-                Get the Chrome Extension →
-              </Text>
+        {assignments.length === 0 && insights && insights.hasSocialMediaData && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>📭</Text>
+            <Text style={styles.emptyTitle}>No assignments yet</Text>
+            <Text style={styles.emptyText}>
+              To get started, install the Chrome extension and sync your Moodle assignments.
+            </Text>
+            <View style={styles.instructionsCard}>
+              <Text style={styles.instructionsTitle}>How to sync:</Text>
+              <Text style={styles.instructionStep}>1. Install the Chrome extension</Text>
+              <Text style={styles.instructionStep}>2. Enter your email: {email}</Text>
+              <Text style={styles.instructionStep}>3. Click "Sync Assignments"</Text>
+              <Text style={styles.instructionStep}>4. Pull to refresh this screen</Text>
             </View>
-          ) : (
-            <View>
-              {assignments.map((assignment) => (
-                <View key={assignment.id} style={styles.assignmentCard}>
-                  <Text style={styles.assignmentTitle}>{assignment.title || 'Untitled'}</Text>
-                  <Text style={styles.assignmentCourse}>{assignment.course || 'Unknown course'}</Text>
-                  {(assignment.date || assignment.time) && (
-                    <View style={styles.assignmentDateRow}>
-                      <Text style={styles.assignmentDate}>
-                        📅 {assignment.date} {assignment.time}
-                      </Text>
-                    </View>
-                  )}
-                  {assignment.description && (
-                    <Text style={styles.assignmentDescription} numberOfLines={2}>
-                      {assignment.description}
-                    </Text>
-                  )}
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
+            <Text style={styles.linkText} onPress={openChromeWebStore}>
+              Get the Chrome Extension →
+            </Text>
+          </View>
+        )}
 
         {expoPushToken && (
           <View style={styles.footer}>
@@ -395,57 +369,6 @@ const styles = StyleSheet.create({
   },
   assignmentsContainer: {
     marginBottom: 8,
-  },
-  miniAssignmentCard: {
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#ff6b6b',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  miniAssignmentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  miniAssignmentTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    flex: 1,
-  },
-  miniAssignmentDate: {
-    fontSize: 12,
-    color: '#ff6b6b',
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  miniAssignmentCourse: {
-    fontSize: 12,
-    color: '#666',
-  },
-  moreAssignments: {
-    fontSize: 13,
-    color: '#999',
-    fontStyle: 'italic',
-    marginTop: 4,
-  },
-
-  fullAssignmentsSection: {
-    marginTop: 8,
-  },
-  fullSectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 12,
   },
 
   emptyState: {
