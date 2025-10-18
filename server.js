@@ -10,8 +10,9 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
-// Store push tokens (in production, use a database)
+// Store push tokens and assignments (in production, use a database)
 let pushTokens = [];
+let assignments = [];
 
 // Health check endpoint
 app.get("/", (req, res) => {
@@ -103,6 +104,44 @@ app.get("/api/tokens", (req, res) => {
 app.delete("/api/tokens", (req, res) => {
 	pushTokens = [];
 	res.json({ success: true, message: "All tokens cleared" });
+});
+
+// Receive assignments from Chrome extension
+app.post("/api/assignments", (req, res) => {
+	const { assignments: newAssignments, extractedAt } = req.body;
+
+	if (!newAssignments || !Array.isArray(newAssignments)) {
+		return res.status(400).json({ error: "Assignments array is required" });
+	}
+
+	// Store assignments with metadata
+	assignments = newAssignments.map((a) => ({
+		...a,
+		receivedAt: new Date().toISOString(),
+		extractedAt: extractedAt || new Date().toISOString(),
+	}));
+
+	console.log(`Received ${assignments.length} assignments from Moodle`);
+
+	res.json({
+		success: true,
+		message: `Received ${assignments.length} assignments`,
+		count: assignments.length,
+	});
+});
+
+// Get all assignments
+app.get("/api/assignments", (req, res) => {
+	res.json({
+		count: assignments.length,
+		assignments: assignments,
+	});
+});
+
+// Clear all assignments
+app.delete("/api/assignments", (req, res) => {
+	assignments = [];
+	res.json({ success: true, message: "All assignments cleared" });
 });
 
 app.listen(PORT, () => {

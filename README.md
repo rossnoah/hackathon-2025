@@ -1,6 +1,6 @@
 # Hackathon 2025 - Push Notification System
 
-A full-stack push notification system built with Express.js server and Expo React Native app.
+A full-stack push notification system with Express.js server, Expo React Native app, and Chrome extension for Moodle integration.
 
 ## Project Structure
 
@@ -18,7 +18,22 @@ hackathon/
 │   ├── .env              # Environment variables (not committed)
 │   ├── .env.example      # Environment template
 │   └── package.json      # App dependencies
+└── chrome-extension/      # Chrome extension for Moodle scraping
+    ├── manifest.json     # Extension configuration
+    ├── content.js        # Scrapes assignments from Moodle
+    ├── popup.html        # Extension popup UI
+    ├── popup.js          # Popup logic
+    ├── icons/            # Extension icons (need to be added)
+    └── README.md         # Extension documentation
 ```
+
+## Features
+
+- 📱 **Mobile Push Notifications** - Send notifications to iOS/Android devices
+- 📚 **Moodle Integration** - Chrome extension scrapes assignments from Lafayette's Moodle
+- 🔔 **Real-time Sync** - Extract and sync assignments with one click
+- 🌐 **ngrok Tunneling** - Develop locally with public HTTPS URLs
+- 💾 **In-memory Storage** - Fast data storage (upgradable to database)
 
 ## Prerequisites
 
@@ -27,6 +42,7 @@ hackathon/
 - [ngrok](https://ngrok.com/) account (free tier works)
 - Physical iOS or Android device (notifications don't work in simulators)
 - Expo Go app or EAS development build
+- Google Chrome browser (for extension)
 
 ## Quick Start
 
@@ -108,6 +124,19 @@ npx expo start
 
 **Important:** Push notifications only work on physical devices!
 
+### 6. Install Chrome Extension (Optional)
+
+See [Chrome Extension README](chrome-extension/README.md) for detailed instructions.
+
+**Quick setup:**
+
+1. Add icon files to `chrome-extension/icons/` (icon16.png, icon48.png, icon128.png)
+2. Open Chrome and go to `chrome://extensions/`
+3. Enable "Developer mode"
+4. Click "Load unpacked" and select the `chrome-extension` directory
+5. Navigate to https://moodle.lafayette.edu/calendar/view.php?view=upcoming
+6. Click the extension icon, enter your ngrok URL, and extract assignments!
+
 ## API Endpoints
 
 ### POST /api/register-token
@@ -170,6 +199,60 @@ Clear all registered tokens.
 {
   "success": true,
   "message": "All tokens cleared"
+}
+```
+
+### POST /api/assignments
+Receive assignments from Chrome extension.
+
+**Request Body:**
+```json
+{
+  "assignments": [
+    {
+      "id": "3911473",
+      "courseId": "30874",
+      "title": "Lab 5 is due",
+      "course": "ECE 433.01-Fall 2025",
+      "date": "Tuesday, October 21",
+      "time": "7:00 AM",
+      "description": "No late submissions accepted",
+      "type": "due",
+      "component": "mod_assign"
+    }
+  ],
+  "extractedAt": "2025-10-18T20:00:00.000Z"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Received 4 assignments",
+  "count": 4
+}
+```
+
+### GET /api/assignments
+Get all stored assignments.
+
+**Response:**
+```json
+{
+  "count": 4,
+  "assignments": [...]
+}
+```
+
+### DELETE /api/assignments
+Clear all stored assignments.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "All assignments cleared"
 }
 ```
 
