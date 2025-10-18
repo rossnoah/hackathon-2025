@@ -13,10 +13,25 @@ interface Assignment {
   created_at: string;
 }
 
+interface AppUsage {
+  appName: string;
+  usageMinutes: number;
+}
+
+interface Insights {
+  hasSocialMediaData: boolean;
+  socialMediaPercentage?: number;
+  totalScreenTimeMinutes?: number;
+  topApps?: AppUsage[];
+  message: string;
+  assignments: Assignment[];
+}
+
 export default function DashboardScreen() {
   const { expoPushToken } = useNotifications();
   const [email, setEmail] = useState<string>('');
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -29,7 +44,10 @@ export default function DashboardScreen() {
       const userEmail = await AsyncStorage.getItem('userEmail');
       if (userEmail) {
         setEmail(userEmail);
-        await fetchAssignments(userEmail);
+        await Promise.all([
+          fetchAssignments(userEmail),
+          fetchInsights(userEmail),
+        ]);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -56,9 +74,30 @@ export default function DashboardScreen() {
     }
   };
 
+  const fetchInsights = async (userEmail: string) => {
+    try {
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
+      const response = await fetch(`${API_URL}/api/insights/${encodeURIComponent(userEmail)}`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setInsights(data);
+      }
+    } catch (error) {
+      console.error('Error fetching insights:', error);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchAssignments(email);
+    await Promise.all([
+      fetchAssignments(email),
+      fetchInsights(email),
+    ]);
     setRefreshing(false);
   };
 
@@ -83,60 +122,126 @@ export default function DashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-      <View style={styles.header}>
-        <Text style={styles.title}>📚 My Assignments</Text>
-        <Text style={styles.email}>{email}</Text>
-      </View>
-
-      {assignments.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>📭</Text>
-          <Text style={styles.emptyTitle}>No assignments yet</Text>
-          <Text style={styles.emptyText}>
-            To get started, install the Chrome extension and sync your Moodle assignments.
-          </Text>
-          <View style={styles.instructionsCard}>
-            <Text style={styles.instructionsTitle}>How to sync:</Text>
-            <Text style={styles.instructionStep}>1. Install the Chrome extension</Text>
-            <Text style={styles.instructionStep}>2. Enter your email: {email}</Text>
-            <Text style={styles.instructionStep}>3. Click "Sync Assignments"</Text>
-            <Text style={styles.instructionStep}>4. Pull to refresh this screen</Text>
-          </View>
-          <Text style={styles.linkText} onPress={openChromeWebStore}>
-            Get the Chrome Extension →
-          </Text>
+        <View style={styles.header}>
+          <Text style={styles.email}>👋 {email}</Text>
         </View>
-      ) : (
-        <View style={styles.assignmentsList}>
-          <Text style={styles.assignmentCount}>
-            {assignments.length} assignment{assignments.length !== 1 ? 's' : ''}
-          </Text>
-          {assignments.map((assignment) => (
-            <View key={assignment.id} style={styles.assignmentCard}>
-              <Text style={styles.assignmentTitle}>{assignment.title || 'Untitled'}</Text>
-              <Text style={styles.assignmentCourse}>{assignment.course || 'Unknown course'}</Text>
-              {(assignment.date || assignment.time) && (
-                <View style={styles.assignmentDateRow}>
-                  <Text style={styles.assignmentDate}>
-                    📅 {assignment.date} {assignment.time}
-                  </Text>
+
+        {insights && insights.hasSocialMediaData && (
+          <>
+            <View style={styles.screenTimeCard}>
+              <Text style={styles.screenTimeLabel}>Screen Time Reality Check</Text>
+              <Text style={styles.screenTimePercentage}>
+                {insights.socialMediaPercentage}%
+              </Text>
+              <Text style={styles.screenTimeDescription}>
+                of your day on social media
+              </Text>
+              {insights.topApps && insights.topApps.length > 0 && (
+                <View style={styles.topAppsContainer}>
+                  {insights.topApps.map((app, index) => (
+                    <View key={index} style={styles.topApp}>
+                      <Text style={styles.topAppName}>{app.appName}</Text>
+                      <Text style={styles.topAppTime}>{app.usageMinutes}m</Text>
+                    </View>
+                  ))}
                 </View>
               )}
-              {assignment.description && (
-                <Text style={styles.assignmentDescription} numberOfLines={2}>
-                  {assignment.description}
-                </Text>
-              )}
             </View>
-          ))}
-        </View>
-      )}
 
-      {expoPushToken && (
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>✓ Push notifications enabled</Text>
+            <View style={styles.messageCard}>
+              <Text style={styles.messageIcon}>⚠️</Text>
+              <Text style={styles.messageText}>{insights.message}</Text>
+            </View>
+
+            {assignments.length > 0 && (
+              <View style={styles.assignmentSection}>
+                <Text style={styles.sectionTitle}>You should really be doing these:</Text>
+                <View style={styles.assignmentsContainer}>
+                  {assignments.slice(0, 3).map((assignment) => (
+                    <View key={assignment.id} style={styles.miniAssignmentCard}>
+                      <View style={styles.miniAssignmentHeader}>
+                        <Text style={styles.miniAssignmentTitle} numberOfLines={1}>
+                          {assignment.title || 'Untitled'}
+                        </Text>
+                        <Text style={styles.miniAssignmentDate}>
+                          {assignment.date}
+                        </Text>
+                      </View>
+                      <Text style={styles.miniAssignmentCourse} numberOfLines={1}>
+                        {assignment.course}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+                {assignments.length > 3 && (
+                  <Text style={styles.moreAssignments}>
+                    +{assignments.length - 3} more assignment{assignments.length - 3 !== 1 ? 's' : ''}
+                  </Text>
+                )}
+              </View>
+            )}
+          </>
+        )}
+
+        {(!insights || !insights.hasSocialMediaData) && (
+          <View style={styles.noDataCard}>
+            <Text style={styles.noDataEmoji}>📱</Text>
+            <Text style={styles.noDataTitle}>No screen time data yet</Text>
+            <Text style={styles.noDataText}>
+              Go to the Screen Time tab and share your app usage to get AI-generated insights and personalized reminders about your procrastination habits!
+            </Text>
+          </View>
+        )}
+
+        <View style={styles.fullAssignmentsSection}>
+          <Text style={styles.fullSectionTitle}>All Assignments</Text>
+          {assignments.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyEmoji}>📭</Text>
+              <Text style={styles.emptyTitle}>No assignments yet</Text>
+              <Text style={styles.emptyText}>
+                To get started, install the Chrome extension and sync your Moodle assignments.
+              </Text>
+              <View style={styles.instructionsCard}>
+                <Text style={styles.instructionsTitle}>How to sync:</Text>
+                <Text style={styles.instructionStep}>1. Install the Chrome extension</Text>
+                <Text style={styles.instructionStep}>2. Enter your email: {email}</Text>
+                <Text style={styles.instructionStep}>3. Click "Sync Assignments"</Text>
+                <Text style={styles.instructionStep}>4. Pull to refresh this screen</Text>
+              </View>
+              <Text style={styles.linkText} onPress={openChromeWebStore}>
+                Get the Chrome Extension →
+              </Text>
+            </View>
+          ) : (
+            <View>
+              {assignments.map((assignment) => (
+                <View key={assignment.id} style={styles.assignmentCard}>
+                  <Text style={styles.assignmentTitle}>{assignment.title || 'Untitled'}</Text>
+                  <Text style={styles.assignmentCourse}>{assignment.course || 'Unknown course'}</Text>
+                  {(assignment.date || assignment.time) && (
+                    <View style={styles.assignmentDateRow}>
+                      <Text style={styles.assignmentDate}>
+                        📅 {assignment.date} {assignment.time}
+                      </Text>
+                    </View>
+                  )}
+                  {assignment.description && (
+                    <Text style={styles.assignmentDescription} numberOfLines={2}>
+                      {assignment.description}
+                    </Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
         </View>
-      )}
+
+        {expoPushToken && (
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>✓ Push notifications enabled</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -156,6 +261,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 20,
+    paddingBottom: 40,
   },
   loadingText: {
     textAlign: 'center',
@@ -166,16 +272,182 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 24,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+  email: {
+    fontSize: 20,
+    fontWeight: '600',
     color: '#333',
+  },
+
+  screenTimeCard: {
+    backgroundColor: '#ff6b6b',
+    padding: 24,
+    borderRadius: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  screenTimeLabel: {
+    fontSize: 12,
+    color: '#fff',
+    opacity: 0.9,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    fontWeight: '600',
     marginBottom: 8,
   },
-  email: {
+  screenTimePercentage: {
+    fontSize: 56,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  screenTimeDescription: {
+    fontSize: 16,
+    color: '#fff',
+    opacity: 0.95,
+    marginBottom: 12,
+  },
+  topAppsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+  },
+  topApp: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  topAppName: {
+    fontSize: 11,
+    color: '#fff',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  topAppTime: {
     fontSize: 14,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+
+  messageCard: {
+    backgroundColor: '#fff3cd',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    borderLeftWidth: 4,
+    borderLeftColor: '#ffc107',
+  },
+  messageIcon: {
+    fontSize: 24,
+    marginRight: 12,
+    marginTop: -2,
+  },
+  messageText: {
+    fontSize: 14,
+    color: '#856404',
+    fontWeight: '500',
+    flex: 1,
+    lineHeight: 20,
+  },
+
+  noDataCard: {
+    backgroundColor: '#e7f3ff',
+    padding: 24,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: 24,
+    borderWidth: 2,
+    borderColor: '#007bff',
+    borderStyle: 'dashed',
+  },
+  noDataEmoji: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  noDataTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0056b3',
+    marginBottom: 8,
+  },
+  noDataText: {
+    fontSize: 14,
+    color: '#0056b3',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+
+  assignmentSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 12,
+  },
+  assignmentsContainer: {
+    marginBottom: 8,
+  },
+  miniAssignmentCard: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#ff6b6b',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  miniAssignmentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  miniAssignmentTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+  },
+  miniAssignmentDate: {
+    fontSize: 12,
+    color: '#ff6b6b',
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  miniAssignmentCourse: {
+    fontSize: 12,
     color: '#666',
   },
+  moreAssignments: {
+    fontSize: 13,
+    color: '#999',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+
+  fullAssignmentsSection: {
+    marginTop: 8,
+  },
+  fullSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 12,
+  },
+
   emptyState: {
     alignItems: 'center',
     paddingVertical: 40,
@@ -227,15 +499,7 @@ const styles = StyleSheet.create({
     color: '#007bff',
     fontWeight: '600',
   },
-  assignmentsList: {
-    marginBottom: 20,
-  },
-  assignmentCount: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
-    fontWeight: '600',
-  },
+
   assignmentCard: {
     backgroundColor: '#fff',
     padding: 16,
@@ -273,6 +537,7 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 20,
   },
+
   footer: {
     alignItems: 'center',
     paddingVertical: 20,

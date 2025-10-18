@@ -44,6 +44,16 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (email) REFERENCES users(email)
   );
+
+  CREATE TABLE IF NOT EXISTS screentime (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT,
+    app_usage TEXT,
+    total_usage_minutes INTEGER,
+    date TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (email) REFERENCES users(email)
+  );
 `);
 
 // Middleware
@@ -104,10 +114,16 @@ app.post("/api/send-notification", async (req, res) => {
 		let users;
 		if (email) {
 			// Send to specific email
-			users = db.prepare("SELECT push_token FROM users WHERE email = ? AND push_token IS NOT NULL").all(email);
+			users = db
+				.prepare(
+					"SELECT push_token FROM users WHERE email = ? AND push_token IS NOT NULL",
+				)
+				.all(email);
 		} else {
 			// Send to all users
-			users = db.prepare("SELECT push_token FROM users WHERE push_token IS NOT NULL").all();
+			users = db
+				.prepare("SELECT push_token FROM users WHERE push_token IS NOT NULL")
+				.all();
 		}
 
 		if (users.length === 0) {
@@ -157,7 +173,9 @@ app.post("/api/send-notification", async (req, res) => {
 // Get all users
 app.get("/api/users", (req, res) => {
 	try {
-		const users = db.prepare("SELECT email, push_token, created_at, last_seen FROM users").all();
+		const users = db
+			.prepare("SELECT email, push_token, created_at, last_seen FROM users")
+			.all();
 		res.json({ count: users.length, users });
 	} catch (error) {
 		console.error("Error fetching users:", error);
@@ -201,7 +219,7 @@ app.post("/api/assignments", (req, res) => {
 				a.actionUrl || null,
 				a.type || null,
 				a.component || null,
-				extractedAt || new Date().toISOString()
+				extractedAt || new Date().toISOString(),
 			);
 		}
 
@@ -225,9 +243,15 @@ app.get("/api/assignments", (req, res) => {
 		let assignments;
 
 		if (email) {
-			assignments = db.prepare("SELECT * FROM assignments WHERE email = ? ORDER BY created_at DESC").all(email);
+			assignments = db
+				.prepare(
+					"SELECT * FROM assignments WHERE email = ? ORDER BY created_at DESC",
+				)
+				.all(email);
 		} else {
-			assignments = db.prepare("SELECT * FROM assignments ORDER BY created_at DESC").all();
+			assignments = db
+				.prepare("SELECT * FROM assignments ORDER BY created_at DESC")
+				.all();
 		}
 
 		res.json({ count: assignments.length, assignments });
@@ -237,24 +261,202 @@ app.get("/api/assignments", (req, res) => {
 	}
 });
 
-// Function to generate Duolingo-style notification using GPT-4o
-async function generateDuolingoNotification(assignments) {
+// Get user's screentime insights with AI message
+app.get("/api/insights/:email", async (req, res) => {
+	const { email } = req.params;
+
+	if (!email) {
+		return res.status(400).json({ error: "Email is required" });
+	}
+
 	try {
-		const assignmentContext = assignments.map(a =>
-			`- ${a.title} (${a.course}) due ${a.date} ${a.time}`
-		).join('\n');
+		// Get latest screentime data
+		const latestScreentime = db
+			.prepare(
+				`SELECT app_usage, total_usage_minutes FROM screentime 
+       WHERE email = ? 
+       ORDER BY created_at DESC 
+       LIMIT 1`,
+			)
+			.get(email);
+
+		// Get user's assignments
+		const assignments = db
+			.prepare(
+				"SELECT * FROM assignments WHERE email = ? ORDER BY created_at DESC",
+			)
+			.all(email);
+
+		if (!latestScreentime) {
+			return res.json({
+				hasSocialMediaData: false,
+				message: "Start tracking your screen time to get personalized insights!",
+				assignments: assignments || [],
+			});
+		}
+
+		const appUsage = JSON.parse(latestScreentime.app_usage);
+		const totalMinutesInDay = 24 * 60;
+		const socialMediaPercentage = Math.round(
+			(latestScreentime.total_usage_minutes / totalMinutesInDay) * 100,
+		);
+
+		// Generate AI message about procrastination
+		let aiMessage = "";
+		try {
+			const appsList = appUsage
+				.map((app) => `${app.appName} (${app.usageMinutes}m)`)
+				.join(", ");
+
+			const assignmentsList = assignments
+				.map((a) => `- ${a.title} (${a.course}) due ${a.date}`)
+				.join("\n");
+
+			const completion = await openai.chat.completions.create({
+				model: "gpt-4o",
+				messages: [
+					{
+						role: "system",
+						content: `You are a witty and slightly aggressive academic coach. Your job is to give students a reality check about their procrastination. Be direct, slightly guilt-inducing, but funny and motivating. Keep it to 1-2 sentences max. The tone should be like a concerned friend who's a bit sarcastic.`,
+					},
+					{
+						role: "user",
+						content: `This student has spent ${socialMediaPercentage}% of their day on social media apps: ${appsList}. They have these assignments due soon:\n${assignmentsList || "No specific assignments yet"}\n\nGive them a reality check about how their day is going.`,
+					},
+				],
+				temperature: 0.9,
+				max_tokens: 80,
+			});
+
+			aiMessage = completion.choices[0].message.content.trim();
+		} catch (error) {
+			console.error("Error generating AI message:", error);
+			const fallbacks = [
+				`You've spent ${socialMediaPercentage}% of your day on social media... maybe it's time to focus on those assignments? 📚`,
+				`Social media: ${socialMediaPercentage}% of your day. Assignments: Still waiting for you. The math checks out. 📱➡️📚`,
+				`${socialMediaPercentage}% on TikTok/Instagram? Buddy, those assignments aren't going to do themselves! ⏰`,
+			];
+			aiMessage = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+		}
+
+		res.json({
+			hasSocialMediaData: true,
+			socialMediaPercentage,
+			totalScreenTimeMinutes: latestScreentime.total_usage_minutes,
+			topApps: appUsage.slice(0, 3),
+			message: aiMessage,
+			assignments: assignments || [],
+		});
+	} catch (error) {
+		console.error("Error fetching insights:", error);
+		res.status(500).json({ error: "Failed to fetch insights" });
+	}
+});
+
+// Receive screen time data from mobile app
+app.post("/api/screentime", (req, res) => {
+	const { email, appUsage, date } = req.body;
+
+	if (!email) {
+		return res.status(400).json({ error: "Email is required" });
+	}
+
+	if (!appUsage || !Array.isArray(appUsage)) {
+		return res.status(400).json({ error: "appUsage array is required" });
+	}
+
+	try {
+		const screentimeData = {
+			email,
+			date: date || new Date().toISOString().split("T")[0],
+			timestamp: new Date().toISOString(),
+			appUsage,
+			totalApps: appUsage.length,
+			totalUsageMinutes: appUsage.reduce(
+				(sum, app) => sum + (app.usageMinutes || 0),
+				0,
+			),
+		};
+
+		// Ensure user exists in users table
+		const userCheckStmt = db.prepare("SELECT email FROM users WHERE email = ?");
+		const userExists = userCheckStmt.get(email);
+
+		if (!userExists) {
+			const userInsertStmt = db.prepare(
+				"INSERT INTO users (email) VALUES (?)",
+			);
+			userInsertStmt.run(email);
+		}
+
+		// Store in database
+		const stmt = db.prepare(`
+      INSERT INTO screentime (email, app_usage, total_usage_minutes, date)
+      VALUES (?, ?, ?, ?)
+    `);
+
+		stmt.run(
+			email,
+			JSON.stringify(appUsage),
+			screentimeData.totalUsageMinutes,
+			screentimeData.date,
+		);
+
+		console.log(
+			"📱 SCREEN TIME DATA STORED:",
+			JSON.stringify(screentimeData, null, 2),
+		);
+
+		res.json({
+			success: true,
+			message: "Screen time data received and stored",
+			received: screentimeData,
+		});
+	} catch (error) {
+		console.error("Error processing screen time data:", error);
+		res.status(500).json({ error: "Failed to process screen time data" });
+	}
+});
+
+// Function to generate Duolingo-style notification using GPT-4o
+async function generateDuolingoNotification(assignments, email) {
+	try {
+		const assignmentContext = assignments
+			.map((a) => `- ${a.title} (${a.course}) due ${a.date} ${a.time}`)
+			.join("\n");
+
+		// Get latest screentime data for this user
+		let screentimeContext = "";
+		try {
+			const latestScreentime = db
+				.prepare(
+					`SELECT app_usage FROM screentime WHERE email = ? ORDER BY created_at DESC LIMIT 1`,
+				)
+				.get(email);
+
+			if (latestScreentime) {
+				const appUsage = JSON.parse(latestScreentime.app_usage);
+				const topApps = appUsage
+					.slice(0, 3)
+					.map((app) => `${app.appName} (${app.usageMinutes}m)`)
+					.join(", ");
+				screentimeContext = `\n\nThe student's top apps today: ${topApps}. Consider mentioning these in a cheeky way to guilt them about procrastinating!`;
+			}
+		} catch (err) {
+			console.error("Error fetching screentime context:", err);
+		}
 
 		const completion = await openai.chat.completions.create({
 			model: "gpt-4o",
 			messages: [
 				{
 					role: "system",
-					content: `You are a witty, slightly passive-aggressive notification bot similar to Duolingo's owl. Your job is to remind students about their assignments in a fun, motivating, but also slightly guilt-inducing way. Keep it short (max 2 sentences), funny, and personalized to their specific assignments. Use emojis sparingly. Be creative and vary your approach - sometimes encouraging, sometimes playful threatening, sometimes disappointed, sometimes overly dramatic. Make it feel personal and urgent but in a lighthearted way.`
+					content: `You are a witty, slightly aggressive notification bot similar to Duolingo's owl. Your job is to remind students about their assignments in a fun, motivating, but slightly guilt-inducing way. Keep it short (max 2 sentences), funny, and personalized. Be creative and vary your approach - sometimes encouraging, sometimes playfully threatening, sometimes disappointed. Make it feel personal and urgent but lighthearted. If you know what apps they've been using, call them out on it (e.g., "stop wasting time on TikTok, you have an assignment due!"). The messages should be vaguely threatening and short.`,
 				},
 				{
 					role: "user",
-					content: `Generate a short notification message for a student with these upcoming assignments:\n${assignmentContext}`
-				}
+					content: `Generate a short notification message for a student with these upcoming assignments:\n${assignmentContext}${screentimeContext}`,
+				},
 			],
 			temperature: 1.0,
 			max_tokens: 100,
@@ -269,22 +471,31 @@ async function generateDuolingoNotification(assignments) {
 			"I'm not mad, just disappointed you haven't checked your assignments yet 📚",
 			"Those assignments aren't going to complete themselves... unfortunately 🎓",
 			"Me: Hey, check your assignments!\nYou: *ignores*\nMe: 😢",
+			"Stop scrolling and get back to work! 📱➡️📚",
 		];
 		return fallbacks[Math.floor(Math.random() * fallbacks.length)];
 	}
 }
 
 // Scheduled job to send reminders every 60 seconds
-cron.schedule('*/1 * * * *', async () => {
-	console.log('🔔 Running scheduled notification job...');
+cron.schedule("*/1 * * * *", async () => {
+	console.log("🔔 Running scheduled notification job...");
 
 	try {
 		// Get all users with push tokens
-		const users = db.prepare("SELECT email, push_token FROM users WHERE push_token IS NOT NULL").all();
+		const users = db
+			.prepare(
+				"SELECT email, push_token FROM users WHERE push_token IS NOT NULL",
+			)
+			.all();
 
 		for (const user of users) {
 			// Get assignments for this user
-			const assignments = db.prepare("SELECT * FROM assignments WHERE email = ? ORDER BY created_at DESC").all(user.email);
+			const assignments = db
+				.prepare(
+					"SELECT * FROM assignments WHERE email = ? ORDER BY created_at DESC",
+				)
+				.all(user.email);
 
 			// Only send if user has assignments
 			if (assignments.length === 0) {
@@ -292,31 +503,38 @@ cron.schedule('*/1 * * * *', async () => {
 				continue;
 			}
 
-			// Generate personalized notification
-			const notificationBody = await generateDuolingoNotification(assignments);
+			// Generate personalized notification with screentime context
+			const notificationBody = await generateDuolingoNotification(
+				assignments,
+				user.email,
+			);
 
 			// Send notification
 			if (Expo.isExpoPushToken(user.push_token)) {
 				try {
-					await expo.sendPushNotificationsAsync([{
-						to: user.push_token,
-						sound: 'default',
-						title: '📚 Assignment Reminder',
-						body: notificationBody,
-						data: {
-							type: 'reminder',
-							assignmentCount: assignments.length,
-							email: user.email
+					await expo.sendPushNotificationsAsync([
+						{
+							to: user.push_token,
+							sound: "default",
+							title: "📚 Assignment Reminder",
+							body: notificationBody,
+							data: {
+								type: "reminder",
+								assignmentCount: assignments.length,
+								email: user.email,
+							},
 						},
-					}]);
-					console.log(`✅ Sent notification to ${user.email}: "${notificationBody}"`);
+					]);
+					console.log(
+						`✅ Sent notification to ${user.email}: "${notificationBody}"`,
+					);
 				} catch (error) {
 					console.error(`Error sending to ${user.email}:`, error);
 				}
 			}
 		}
 	} catch (error) {
-		console.error('Error in scheduled job:', error);
+		console.error("Error in scheduled job:", error);
 	}
 });
 
