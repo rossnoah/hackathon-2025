@@ -1,5 +1,7 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet, Button, View } from 'react-native';
+import { Platform, StyleSheet, Button, View, TextInput } from 'react-native';
+import { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { HelloWave } from '@/components/hello-wave';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
@@ -10,6 +12,49 @@ import { useNotifications, sendTestNotification } from '@/hooks/useNotifications
 
 export default function HomeScreen() {
   const { expoPushToken, notification } = useNotifications();
+  const [email, setEmail] = useState('');
+  const [savedEmail, setSavedEmail] = useState('');
+
+  // Load saved email on mount
+  useEffect(() => {
+    AsyncStorage.getItem('userEmail').then((storedEmail) => {
+      if (storedEmail) {
+        setEmail(storedEmail);
+        setSavedEmail(storedEmail);
+      }
+    });
+  }, []);
+
+  const handleSaveEmail = async () => {
+    if (!email || !email.includes('@')) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    try {
+      await AsyncStorage.setItem('userEmail', email);
+      setSavedEmail(email);
+
+      // Register email with server
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
+      await fetch(`${API_URL}/api/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: JSON.stringify({
+          email: email,
+          pushToken: expoPushToken,
+        }),
+      });
+
+      alert('Email registered successfully!');
+    } catch (error) {
+      console.error('Error saving email:', error);
+      alert('Failed to save email');
+    }
+  };
 
   return (
     <ParallaxScrollView
@@ -23,6 +68,32 @@ export default function HomeScreen() {
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title">Welcome!</ThemedText>
         <HelloWave />
+      </ThemedView>
+      <ThemedView style={styles.stepContainer}>
+        <ThemedText type="subtitle">Your Email</ThemedText>
+        <ThemedText style={styles.label}>
+          Enter your email to receive assignment reminders:
+        </ThemedText>
+        <TextInput
+          style={styles.input}
+          placeholder="your.email@lafayette.edu"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {savedEmail && (
+          <ThemedText style={styles.savedEmail}>
+            Registered: {savedEmail}
+          </ThemedText>
+        )}
+        <View style={styles.buttonContainer}>
+          <Button
+            title="Save Email"
+            onPress={handleSaveEmail}
+          />
+        </View>
       </ThemedView>
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Push Notifications</ThemedText>
@@ -125,5 +196,23 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 10,
     gap: 4,
+  },
+  label: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#fff',
+    color: '#000',
+  },
+  savedEmail: {
+    fontSize: 12,
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 });

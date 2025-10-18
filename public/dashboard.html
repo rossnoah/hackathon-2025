@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hackathon Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 30px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .stat-number {
+      font-size: 36px;
+      font-weight: bold;
+      color: #007bff;
+    }
+
+    .stat-label {
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .section {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      color: #333;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #007bff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: #f8f9fa;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      color: #333;
+      border-bottom: 2px solid #dee2e6;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    tr:hover {
+      background: #f8f9fa;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn:hover {
+      background: #0056b3;
+    }
+
+    .btn-small {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+
+    .send-notification {
+      margin-top: 20px;
+      padding: 20px;
+      background: #e7f3ff;
+      border-radius: 8px;
+      border-left: 4px solid #007bff;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .status {
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 4px;
+      display: none;
+    }
+
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .assignment-card {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      border-left: 3px solid #007bff;
+    }
+
+    .assignment-title {
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .assignment-meta {
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 Hackathon Dashboard</h1>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-number" id="userCount">0</div>
+        <div class="stat-label">Registered Users</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="assignmentCount">0</div>
+        <div class="stat-label">Total Assignments</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="activeTokens">0</div>
+        <div class="stat-label">Active Push Tokens</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>👥 Registered Users</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Push Token</th>
+            <th>Registered</th>
+            <th>Last Seen</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="usersTable">
+          <tr><td colspan="5">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>📚 Assignments</h2>
+      <div class="form-group">
+        <label>Filter by Email:</label>
+        <select id="emailFilter">
+          <option value="">All Users</option>
+        </select>
+      </div>
+      <div id="assignmentsList">
+        Loading...
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>📤 Send Notification</h2>
+      <div class="send-notification">
+        <div class="form-group">
+          <label>Send To:</label>
+          <select id="notifyEmail">
+            <option value="">All Users</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Title:</label>
+          <input type="text" id="notifyTitle" placeholder="Notification title">
+        </div>
+        <div class="form-group">
+          <label>Message:</label>
+          <textarea id="notifyBody" placeholder="Notification message"></textarea>
+        </div>
+        <button class="btn" onclick="sendNotification()">Send Notification</button>
+        <div id="notifyStatus" class="status"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let users = [];
+    let assignments = [];
+
+    async function loadData() {
+      try {
+        const [usersRes, assignmentsRes] = await Promise.all([
+          fetch('/api/users'),
+          fetch('/api/assignments')
+        ]);
+
+        const usersData = await usersRes.json();
+        const assignmentsData = await assignmentsRes.json();
+
+        users = usersData.users || [];
+        assignments = assignmentsData.assignments || [];
+
+        updateStats();
+        renderUsers();
+        renderAssignments();
+        populateEmailFilters();
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+    }
+
+    function updateStats() {
+      document.getElementById('userCount').textContent = users.length;
+      document.getElementById('assignmentCount').textContent = assignments.length;
+      document.getElementById('activeTokens').textContent =
+        users.filter(u => u.push_token).length;
+    }
+
+    function renderUsers() {
+      const tbody = document.getElementById('usersTable');
+      if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5">No users registered yet</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = users.map(user => `
+        <tr>
+          <td>${user.email}</td>
+          <td>${user.push_token ? user.push_token.substring(0, 20) + '...' : 'Not registered'}</td>
+          <td>${new Date(user.created_at).toLocaleDateString()}</td>
+          <td>${new Date(user.last_seen).toLocaleString()}</td>
+          <td>
+            <button class="btn btn-small" onclick="sendToUser('${user.email}')">
+              Send Notification
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderAssignments() {
+      const container = document.getElementById('assignmentsList');
+      const filter = document.getElementById('emailFilter').value;
+
+      const filtered = filter
+        ? assignments.filter(a => a.email === filter)
+        : assignments;
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<p>No assignments found</p>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(a => `
+        <div class="assignment-card">
+          <div class="assignment-title">${a.title || 'Untitled'}</div>
+          <div class="assignment-meta">
+            <strong>${a.email}</strong> •
+            ${a.course || 'Unknown course'} •
+            ${a.date || ''} ${a.time || ''} •
+            Extracted: ${new Date(a.created_at).toLocaleString()}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function populateEmailFilters() {
+      const emails = [...new Set(users.map(u => u.email))];
+
+      const filterSelect = document.getElementById('emailFilter');
+      const notifySelect = document.getElementById('notifyEmail');
+
+      const options = emails.map(e => `<option value="${e}">${e}</option>`).join('');
+      filterSelect.innerHTML = '<option value="">All Users</option>' + options;
+      notifySelect.innerHTML = '<option value="">All Users</option>' + options;
+    }
+
+    function sendToUser(email) {
+      document.getElementById('notifyEmail').value = email;
+      document.getElementById('notifyTitle').value = 'Assignment Reminder';
+      document.getElementById('notifyBody').value = `You have upcoming assignments to complete!`;
+      window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    async function sendNotification() {
+      const email = document.getElementById('notifyEmail').value;
+      const title = document.getElementById('notifyTitle').value;
+      const body = document.getElementById('notifyBody').value;
+      const status = document.getElementById('notifyStatus');
+
+      if (!title || !body) {
+        status.className = 'status error';
+        status.style.display = 'block';
+        status.textContent = 'Title and message are required';
+        return;
+      }
+
+      try {
+        const payload = { title, body };
+        if (email) payload.email = email;
+
+        const response = await fetch('/api/send-notification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        status.className = 'status ' + (response.ok ? 'success' : 'error');
+        status.style.display = 'block';
+        status.textContent = data.message || (response.ok ? 'Notification sent!' : 'Failed to send');
+
+        if (response.ok) {
+          document.getElementById('notifyTitle').value = '';
+          document.getElementById('notifyBody').value = '';
+        }
+
+        setTimeout(() => {
+          status.style.display = 'none';
+        }, 5000);
+      } catch (error) {
+        status.className = 'status error';
+        status.style.display = 'block';
+        status.textContent = 'Error: ' + error.message;
+      }
+    }
+
+    // Event listeners
+    document.getElementById('emailFilter').addEventListener('change', renderAssignments);
+
+    // Auto-refresh every 30 seconds
+    setInterval(loadData, 30000);
+
+    // Initial load
+    loadData();
+  </script>
+</body>
+</html>

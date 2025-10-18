@@ -1,9 +1,24 @@
 let extractedAssignments = [];
 
-// Load server URL from storage
-chrome.storage.local.get(['serverUrl'], (result) => {
+// Load saved data from storage
+chrome.storage.local.get(['serverUrl', 'email'], (result) => {
   if (result.serverUrl) {
     document.getElementById('serverUrl').value = result.serverUrl;
+  }
+  if (result.email) {
+    document.getElementById('email').value = result.email;
+  }
+});
+
+// Save email when changed
+document.getElementById('email').addEventListener('change', (e) => {
+  const email = e.target.value;
+  chrome.storage.local.set({ email });
+
+  // Register user with server
+  const serverUrl = document.getElementById('serverUrl').value;
+  if (serverUrl && email) {
+    registerUser(email, serverUrl);
   }
 });
 
@@ -12,6 +27,22 @@ document.getElementById('serverUrl').addEventListener('change', (e) => {
   const url = e.target.value;
   chrome.storage.local.set({ serverUrl: url });
 });
+
+// Register user with server
+async function registerUser(email, serverUrl) {
+  try {
+    await fetch(`${serverUrl}/api/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
+      body: JSON.stringify({ email }),
+    });
+  } catch (error) {
+    console.error('Error registering user:', error);
+  }
+}
 
 // Show status message
 function showStatus(message, type = 'info') {
@@ -107,6 +138,12 @@ function extractFromTab(tabId) {
 // Send to server button
 document.getElementById('sendBtn').addEventListener('click', async () => {
   const serverUrl = document.getElementById('serverUrl').value;
+  const email = document.getElementById('email').value;
+
+  if (!email) {
+    showStatus('Please enter your email', 'error');
+    return;
+  }
 
   if (!serverUrl) {
     showStatus('Please enter a server URL', 'error');
@@ -128,6 +165,7 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
         'ngrok-skip-browser-warning': 'true',
       },
       body: JSON.stringify({
+        email,
         assignments: extractedAssignments,
         extractedAt: new Date().toISOString(),
       }),
@@ -146,6 +184,7 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
           'ngrok-skip-browser-warning': 'true',
         },
         body: JSON.stringify({
+          email,
           title: 'Assignments Updated',
           body: `${extractedAssignments.length} assignments synced from Moodle`,
           data: { type: 'assignments', count: extractedAssignments.length },
