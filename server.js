@@ -1,12 +1,20 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const { Expo } = require("expo-server-sdk");
 const Database = require("better-sqlite3");
+const OpenAI = require("openai");
+const cron = require("node-cron");
 
 const app = express();
 const expo = new Expo();
 const PORT = process.env.PORT || 4000;
+
+// Initialize OpenAI
+const openai = new OpenAI({
+	apiKey: process.env.OPENAI_API_KEY,
+});
 
 // Initialize SQLite database
 const db = new Database("hackathon.db");
@@ -229,6 +237,90 @@ app.get("/api/assignments", (req, res) => {
 	}
 });
 
+// Function to generate Duolingo-style notification using GPT-4o
+async function generateDuolingoNotification(assignments) {
+	try {
+		const assignmentContext = assignments.map(a =>
+			`- ${a.title} (${a.course}) due ${a.date} ${a.time}`
+		).join('\n');
+
+		const completion = await openai.chat.completions.create({
+			model: "gpt-4o",
+			messages: [
+				{
+					role: "system",
+					content: `You are a witty, slightly passive-aggressive notification bot similar to Duolingo's owl. Your job is to remind students about their assignments in a fun, motivating, but also slightly guilt-inducing way. Keep it short (max 2 sentences), funny, and personalized to their specific assignments. Use emojis sparingly. Be creative and vary your approach - sometimes encouraging, sometimes playful threatening, sometimes disappointed, sometimes overly dramatic. Make it feel personal and urgent but in a lighthearted way.`
+				},
+				{
+					role: "user",
+					content: `Generate a short notification message for a student with these upcoming assignments:\n${assignmentContext}`
+				}
+			],
+			temperature: 1.0,
+			max_tokens: 100,
+		});
+
+		return completion.choices[0].message.content.trim();
+	} catch (error) {
+		console.error("Error generating notification:", error);
+		// Fallback messages if GPT fails
+		const fallbacks = [
+			"Your assignments are piling up... just saying 👀",
+			"I'm not mad, just disappointed you haven't checked your assignments yet 📚",
+			"Those assignments aren't going to complete themselves... unfortunately 🎓",
+			"Me: Hey, check your assignments!\nYou: *ignores*\nMe: 😢",
+		];
+		return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+	}
+}
+
+// Scheduled job to send reminders every 60 seconds
+cron.schedule('*/1 * * * *', async () => {
+	console.log('🔔 Running scheduled notification job...');
+
+	try {
+		// Get all users with push tokens
+		const users = db.prepare("SELECT email, push_token FROM users WHERE push_token IS NOT NULL").all();
+
+		for (const user of users) {
+			// Get assignments for this user
+			const assignments = db.prepare("SELECT * FROM assignments WHERE email = ? ORDER BY created_at DESC").all(user.email);
+
+			// Only send if user has assignments
+			if (assignments.length === 0) {
+				console.log(`Skipping ${user.email} - no assignments`);
+				continue;
+			}
+
+			// Generate personalized notification
+			const notificationBody = await generateDuolingoNotification(assignments);
+
+			// Send notification
+			if (Expo.isExpoPushToken(user.push_token)) {
+				try {
+					await expo.sendPushNotificationsAsync([{
+						to: user.push_token,
+						sound: 'default',
+						title: '📚 Assignment Reminder',
+						body: notificationBody,
+						data: {
+							type: 'reminder',
+							assignmentCount: assignments.length,
+							email: user.email
+						},
+					}]);
+					console.log(`✅ Sent notification to ${user.email}: "${notificationBody}"`);
+				} catch (error) {
+					console.error(`Error sending to ${user.email}:`, error);
+				}
+			}
+		}
+	} catch (error) {
+		console.error('Error in scheduled job:', error);
+	}
+});
+
 app.listen(PORT, () => {
 	console.log(`Server is running on port ${PORT}`);
+	console.log(`📬 Scheduled notifications running every 60 seconds`);
 });
