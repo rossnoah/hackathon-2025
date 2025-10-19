@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useScreenTime } from "@/hooks/useScreenTime";
 import { router } from "expo-router";
 
 interface Assignment {
@@ -40,6 +41,7 @@ interface Insights {
 
 export default function DashboardScreen() {
   const { expoPushToken } = useNotifications();
+  const { screenTimeData, sendScreenTimeToServer } = useScreenTime();
   const [email, setEmail] = useState<string>("");
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [insights, setInsights] = useState<Insights | null>(null);
@@ -49,6 +51,25 @@ export default function DashboardScreen() {
   useEffect(() => {
     loadUserData();
   }, []);
+
+  // Automatically send screentime data when it becomes available
+  useEffect(() => {
+    const sendScreenTime = async () => {
+      if (screenTimeData && email) {
+        const API_URL =
+          process.env.EXPO_PUBLIC_API_URL || "http://localhost:4000";
+
+        try {
+          await sendScreenTimeToServer(email, API_URL);
+          console.log("Screen time data sent to server successfully");
+        } catch (error) {
+          console.error("Error sending screen time data:", error);
+        }
+      }
+    };
+
+    sendScreenTime();
+  }, [screenTimeData, email]);
 
   const loadUserData = async () => {
     try {
