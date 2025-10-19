@@ -17,7 +17,11 @@ const openai = new OpenAI({
 });
 
 // Initialize SQLite database
-const db = new Database(path.join(__dirname, "hackathon.db"));
+// Use /app/data directory for better containerization support
+const dbPath =
+	process.env.DATABASE_PATH || path.join(__dirname, "data", "hackathon.db");
+console.log(`📂 Database path: ${dbPath}`);
+const db = new Database(dbPath);
 
 // Create tables
 db.exec(`

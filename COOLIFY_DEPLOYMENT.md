@@ -21,6 +21,7 @@ This guide will help you deploy the Assignment Tracker API server to Coolify.
 ### 2. Configure Application
 
 **Build Settings:**
+
 - **Build Pack**: Dockerfile
 - **Dockerfile Location**: `./Dockerfile` (should auto-detect)
 - **Port**: `4000`
@@ -29,12 +30,13 @@ This guide will help you deploy the Assignment Tracker API server to Coolify.
 
 Add the following environment variables in Coolify:
 
-| Key | Value | Required |
-|-----|-------|----------|
-| `PORT` | `4000` | Yes |
-| `OPENAI_API_KEY` | Your OpenAI API key | Yes |
+| Key              | Value               | Required |
+| ---------------- | ------------------- | -------- |
+| `PORT`           | `4000`              | Yes      |
+| `OPENAI_API_KEY` | Your OpenAI API key | Yes      |
 
 To add environment variables:
+
 1. Go to **Environment Variables** tab
 2. Click **+ Add**
 3. Enter key and value
@@ -49,10 +51,12 @@ The SQLite database needs persistent storage to survive container restarts.
 2. Click **+ Add Storage**
 3. Configure:
    - **Name**: `database`
-   - **Source Path**: `/app/hackathon.db` (container path)
+   - **Source Path**: `/app/data` (container path - the entire data directory)
    - **Destination Path**: Auto-generated or custom path on host
-   - **Is Directory**: No (single file)
+   - **Is Directory**: Yes
 4. Click **Save**
+
+**Note**: The database file will be stored at `/app/data/hackathon.db` inside the container.
 
 ### 4. Configure Health Check
 
@@ -86,6 +90,7 @@ EXPO_PUBLIC_API_URL=https://your-app.coolify.app
 ### Update Chrome Extension
 
 When using the Chrome extension, enter your new server URL:
+
 ```
 https://your-app.coolify.app
 ```
@@ -99,13 +104,15 @@ curl https://your-app.coolify.app/health
 ```
 
 Expected response:
+
 ```json
-{"status":"ok","timestamp":"2025-10-19T12:00:00.000Z"}
+{ "status": "ok", "timestamp": "2025-10-19T12:00:00.000Z" }
 ```
 
 ### Test Admin Dashboard
 
 Open in browser:
+
 ```
 https://your-app.coolify.app
 ```
@@ -126,10 +133,10 @@ curl https://your-app.coolify.app/api/users
 
 ## Environment Variables Reference
 
-| Variable | Description | Example | Required |
-|----------|-------------|---------|----------|
-| `PORT` | Server port | `4000` | Yes |
-| `OPENAI_API_KEY` | OpenAI API key for GPT-4o | `sk-proj-...` | Yes |
+| Variable         | Description               | Example       | Required |
+| ---------------- | ------------------------- | ------------- | -------- |
+| `PORT`           | Server port               | `4000`        | Yes      |
+| `OPENAI_API_KEY` | OpenAI API key for GPT-4o | `sk-proj-...` | Yes      |
 
 ## Troubleshooting
 
@@ -145,9 +152,18 @@ curl https://your-app.coolify.app/api/users
 
 ### Database Issues
 
+**Problem**: `SqliteError: unable to open database file` (SQLITE_CANTOPEN)
+
+**Solution**: This means the database directory doesn't exist or isn't writable. Fix:
+
+1. Make sure persistent storage is configured in Coolify pointing to `/app/data`
+2. Redeploy the application
+3. Check logs to see the database path: `📂 Database path: /app/data/hackathon.db`
+4. If still failing, the storage volume might not be mounted correctly in Coolify
+
 **Problem**: Database resets on each deployment
 
-**Solution**: Make sure you've configured persistent storage (see Step 3). The database file needs to persist between container restarts.
+**Solution**: Make sure you've configured persistent storage (see Step 3). The database file needs to persist between container restarts. The storage should point to `/app/data` directory (not a single file).
 
 **Problem**: "Database is locked" error
 
@@ -158,6 +174,7 @@ curl https://your-app.coolify.app/api/users
 **Problem**: "OpenAI API key invalid"
 
 **Solution**:
+
 1. Verify your API key is correct in environment variables
 2. Check your OpenAI account has credits
 3. Ensure the key has proper permissions
@@ -171,6 +188,7 @@ curl https://your-app.coolify.app/api/users
 **Problem**: Coolify shows "unhealthy" status
 
 **Solution**:
+
 1. Check if port `4000` is exposed correctly
 2. Verify `/health` endpoint returns 200 status
 3. Increase start period if app takes longer to boot
@@ -179,11 +197,13 @@ curl https://your-app.coolify.app/api/users
 ### Logs
 
 View real-time logs in Coolify:
+
 1. Go to your application
 2. Click **Logs** tab
 3. Watch for errors during startup
 
 Common startup messages:
+
 ```
 Server running on port 4000
 Database initialized
@@ -199,6 +219,7 @@ To backup the SQLite database:
 1. SSH into your Coolify host
 2. Find the volume path (check Coolify storage settings)
 3. Copy the database file:
+
 ```bash
 cp /path/to/volume/hackathon.db /backup/hackathon-$(date +%Y%m%d).db
 ```
@@ -220,11 +241,13 @@ Add a scheduled task in Coolify or use a backup service that supports volumes.
 If you need to scale beyond a single instance:
 
 1. **Migrate to PostgreSQL**:
+
    - Update database code to use `pg` instead of `better-sqlite3`
    - Update Dockerfile to remove SQLite dependencies
    - Add PostgreSQL service in Coolify
 
 2. **Use external job queue**:
+
    - Replace `node-cron` with Bull + Redis
    - Add Redis service in Coolify
    - Update cron logic to use job queue
@@ -239,6 +262,7 @@ If you need to scale beyond a single instance:
 ### Automatic Deployments
 
 Enable automatic deployments in Coolify:
+
 1. Go to **Source** tab
 2. Enable **Automatic Deployment**
 3. Select branch (e.g., `main`)
@@ -255,6 +279,7 @@ Now, every push to the branch will trigger a deployment.
 ### Zero-Downtime Deployments
 
 Coolify supports zero-downtime deployments:
+
 1. Go to **Advanced** settings
 2. Enable **Zero Downtime Deployment**
 3. New container starts before old one stops
@@ -264,19 +289,23 @@ Coolify supports zero-downtime deployments:
 ### For Production Use
 
 1. **Add authentication**:
+
    - Admin dashboard should require login
    - API endpoints should use JWT tokens
 
 2. **Rate limiting**:
+
    ```bash
    npm install express-rate-limit
    ```
 
 3. **HTTPS only**:
+
    - Coolify provides automatic SSL
    - Force HTTPS in your app
 
 4. **Secure environment variables**:
+
    - Never commit `.env` file
    - Use Coolify's encrypted environment variables
 
@@ -307,6 +336,7 @@ Coolify supports zero-downtime deployments:
 ### Built-in Monitoring
 
 Coolify provides:
+
 - CPU/Memory usage graphs
 - Container logs
 - Health check status
@@ -315,6 +345,7 @@ Coolify provides:
 ### External Monitoring (Optional)
 
 Consider adding:
+
 - **Sentry** for error tracking
 - **Uptime monitoring** (UptimeRobot, etc.)
 - **Log aggregation** (Datadog, Logtail)
@@ -343,7 +374,7 @@ Environment:
   - PORT=4000
   - OPENAI_API_KEY=sk-proj-...
 Storage:
-  - /app/hackathon.db → persistent volume
+  - /app/data → persistent volume (database stored at /app/data/hackathon.db)
 ```
 
 ### Useful Commands

@@ -24,8 +24,8 @@ RUN npm ci --only=production
 # Copy application files
 COPY api/ ./
 
-# Create directory for SQLite database
-RUN mkdir -p /app/data
+# Create directory for SQLite database with proper permissions
+RUN mkdir -p /app/data && chmod 777 /app/data
 
 # Expose port (Coolify will map this)
 EXPOSE 4000
