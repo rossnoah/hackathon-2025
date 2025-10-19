@@ -1,98 +1,53 @@
-# Hackathon API Server
+# Blinky API Server
 
-Express.js server for the Blinky Assignment Tracker system with SQLite database, OpenAI GPT-4o integration, and Expo push notifications.
+TypeScript + Prisma Express server for the Blinky assignment tracking system.
 
-## Setup
+## Quick Start
 
-1. **Install dependencies:**
-
-   ```bash
-   npm install
-   ```
-
-2. **Create `.env` file:**
-
-   ```bash
-   cat > .env << EOF
-   PORT=4000
-   OPENAI_API_KEY=sk-proj-your-api-key-here
-   EOF
-   ```
-
-3. **Start the server:**
-   ```bash
-   npm run dev    # Development with auto-reload
-   # or
-   npm start      # Production mode
-   ```
-
-## Environment Variables
-
-- `PORT` - Server port (default: 4000)
-- `OPENAI_API_KEY` - OpenAI API key for GPT-4o notifications
-
-## Files
-
-- `server.js` - Express server with all API routes
-- `hackathon.db` - SQLite database (auto-created on first run)
-- `package.json` - Dependencies and scripts
-- `.env` - Environment variables (not committed)
-- `public/` - Admin web dashboard (served at `/`)
-
-## API Endpoints
-
-- `GET /` - Admin dashboard
-- `POST /api/register` - Register user
-- `GET /api/users` - Get all users
-- `POST /api/assignments` - Sync assignments
-- `GET /api/assignments?email=X` - Get user's assignments
-- `POST /api/screentime` - Submit screen time data
-- `GET /api/insights/:email` - Get AI insights
-- `POST /api/send-notification` - Send push notification
-- `POST /api/toggle-notifications` - Toggle notifications
-
-## Database Schema
-
-### users
-
-- `email` (PRIMARY KEY)
-- `push_token`
-- `notifications_enabled`
-- `created_at`
-- `last_seen`
-
-### assignments
-
-- `id` (PRIMARY KEY)
-- `email` (FOREIGN KEY)
-- `course_id`, `title`, `course`, `date`, `time`
-- `description`, `action_url`, `type`, `component`
-- `extracted_at`, `created_at`
-
-### screentime
-
-- `id` (PRIMARY KEY)
-- `email` (FOREIGN KEY)
-- `app_usage` (JSON)
-- `total_usage_minutes`
-- `date`
-- `created_at`
-
-## Features
-
-- 🔔 AI-powered push notifications (GPT-4o)
-- 📊 SQLite database with automated schema creation
-- ⏰ Scheduled notifications every 60 seconds (node-cron)
-- 🎯 User-specific assignment tracking
-- 📱 Screen time tracking and insights
-- 🌐 CORS-enabled for cross-origin requests
-
-## Access Database
+### Development
 
 ```bash
-cd api
-sqlite3 hackathon.db
-.tables
-SELECT * FROM users;
-SELECT * FROM assignments;
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env and add your OPENAI_API_KEY
+
+# Push database schema (first time only)
+npm run prisma:push
+
+# Start development server
+npm run dev
 ```
+
+### Production
+
+```bash
+# Build the project
+npm run build
+
+# Start production server
+npm start
+```
+
+## Project Structure
+
+```
+api/
+├── src/
+│   ├── config/           # Configuration & clients
+│   ├── controllers/      # Request handlers
+│   ├── services/         # Business logic
+│   ├── jobs/             # Scheduled tasks
+│   ├── routes/           # Express routes
+│   ├── types/            # TypeScript types
+│   ├── utils/            # Utilities
+│   ├── app.ts            # Express app
+│   └── index.ts          # Entry point
+├── prisma/
+│   └── schema.prisma     # Database schema
+└── dist/                 # Build output
+```
+
+See full documentation in this file or MIGRATION.md for migration guide.

@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  email                 String       @id
+  pushToken             String?      @map("push_token")
+  notificationsEnabled  Boolean      @default(true) @map("notifications_enabled")
+  createdAt             DateTime     @default(now()) @map("created_at")
+  lastSeen              DateTime     @default(now()) @map("last_seen")
+
+  assignments           Assignment[]
+  screentime            Screentime[]
+
+  @@map("users")
+}
+
+model Assignment {
+  id          String   @id
+  email       String
+  courseId    String?  @map("course_id")
+  title       String?
+  course      String?
+  date        String?
+  time        String?
+  description String?
+  actionUrl   String?  @map("action_url")
+  type        String?
+  component   String?
+  extractedAt DateTime @map("extracted_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [email], references: [email])
+
+  @@map("assignments")
+}
+
+model Screentime {
+  id                 Int      @id @default(autoincrement())
+  email              String
+  appUsage           String   @map("app_usage") // JSON string
+  totalUsageMinutes  Int      @map("total_usage_minutes")
+  date               String
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  user               User     @relation(fields: [email], references: [email])
+
+  @@map("screentime")
+}
