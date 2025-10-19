@@ -22,7 +22,12 @@ function extractAssignments() {
       const timeText = card.querySelector('.row .col-11');
       if (dateLink && timeText) {
         assignment.date = dateLink.textContent.trim();
-        assignment.time = timeText.textContent.trim().split(',')[1]?.trim();
+        // Extract only the time portion, skip the date that's already in assignment.date
+        const fullText = timeText.textContent.trim();
+        const parts = fullText.split(',');
+        // If there are 3+ parts (e.g., "Tuesday, October 21, 11:59 PM"), take everything after the second comma
+        // If there are 2 parts, take the second part (the time)
+        assignment.time = parts.length >= 2 ? parts.slice(2).join(',').trim() || parts[1].trim() : '';
       }
 
       // Extract course name

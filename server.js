@@ -24,6 +24,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     email TEXT PRIMARY KEY,
     push_token TEXT,
+    notifications_enabled INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
   );
@@ -68,7 +69,7 @@ app.get("/", (req, res) => {
 
 // Register or update user
 app.post("/api/register", (req, res) => {
-	const { email, pushToken } = req.body;
+	const { email, pushToken, notificationsEnabled } = req.body;
 
 	if (!email) {
 		return res.status(400).json({ error: "Email is required" });
@@ -81,14 +82,21 @@ app.post("/api/register", (req, res) => {
 
 	try {
 		const stmt = db.prepare(`
-      INSERT INTO users (email, push_token, last_seen)
-      VALUES (?, ?, CURRENT_TIMESTAMP)
+      INSERT INTO users (email, push_token, notifications_enabled, last_seen)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
       ON CONFLICT(email) DO UPDATE SET
         push_token = COALESCE(?, push_token),
+        notifications_enabled = COALESCE(?, notifications_enabled),
         last_seen = CURRENT_TIMESTAMP
     `);
 
-		stmt.run(email, pushToken || null, pushToken || null);
+		stmt.run(
+			email,
+			pushToken || null,
+			notificationsEnabled !== undefined ? (notificationsEnabled ? 1 : 0) : 1,
+			pushToken || null,
+			notificationsEnabled !== undefined ? (notificationsEnabled ? 1 : 0) : null,
+		);
 
 		res.json({
 			success: true,
@@ -98,6 +106,37 @@ app.post("/api/register", (req, res) => {
 	} catch (error) {
 		console.error("Error registering user:", error);
 		res.status(500).json({ error: "Failed to register user" });
+	}
+});
+
+// Toggle notifications for a user
+app.post("/api/toggle-notifications", (req, res) => {
+	const { email, enabled } = req.body;
+
+	if (!email) {
+		return res.status(400).json({ error: "Email is required" });
+	}
+
+	if (typeof enabled !== "boolean") {
+		return res.status(400).json({ error: "Enabled must be a boolean" });
+	}
+
+	try {
+		const stmt = db.prepare(`
+      UPDATE users SET notifications_enabled = ? WHERE email = ?
+    `);
+
+		stmt.run(enabled ? 1 : 0, email);
+
+		res.json({
+			success: true,
+			message: `Notifications ${enabled ? "enabled" : "disabled"}`,
+			email,
+			enabled,
+		});
+	} catch (error) {
+		console.error("Error toggling notifications:", error);
+		res.status(500).json({ error: "Failed to toggle notifications" });
 	}
 });
 
@@ -482,10 +521,10 @@ cron.schedule("*/1 * * * *", async () => {
 	console.log("🔔 Running scheduled notification job...");
 
 	try {
-		// Get all users with push tokens
+		// Get all users with push tokens AND notifications enabled
 		const users = db
 			.prepare(
-				"SELECT email, push_token FROM users WHERE push_token IS NOT NULL",
+				"SELECT email, push_token FROM users WHERE push_token IS NOT NULL AND notifications_enabled = 1",
 			)
 			.all();
 

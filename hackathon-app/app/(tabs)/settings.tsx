@@ -12,6 +12,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:4000";
+
 export default function SettingsScreen() {
   const router = useRouter();
   const [email, setEmail] = useState<string>("");
@@ -44,7 +46,6 @@ export default function SettingsScreen() {
       if (value) {
         // Request permissions
         const { status } = await Notifications.requestPermissionsAsync();
-        setNotificationsEnabled(status === "granted");
 
         if (status !== "granted") {
           Alert.alert(
@@ -52,18 +53,48 @@ export default function SettingsScreen() {
             "Please enable notifications in your device settings to receive assignment reminders.",
             [{ text: "OK" }]
           );
+          return;
         }
+
+        // Enable notifications on server
+        await syncNotificationsWithServer(true);
+        setNotificationsEnabled(true);
       } else {
-        // Show alert that they need to disable in settings
-        Alert.alert(
-          "Disable Notifications",
-          "To disable notifications, please go to your device settings.",
-          [{ text: "OK" }]
-        );
+        // Disable notifications on server
+        await syncNotificationsWithServer(false);
         setNotificationsEnabled(false);
       }
     } catch (error) {
       console.error("Error toggling notifications:", error);
+      Alert.alert("Error", "Failed to update notification settings");
+    }
+  };
+
+  const syncNotificationsWithServer = async (enabled: boolean) => {
+    try {
+      if (!email) return;
+
+      const response = await fetch(`${API_URL}/api/toggle-notifications`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+        },
+        body: JSON.stringify({
+          email,
+          enabled,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to toggle notifications");
+      }
+
+      const data = await response.json();
+      console.log("Notifications toggled:", data);
+    } catch (error) {
+      console.error("Error syncing notifications with server:", error);
+      throw error;
     }
   };
 

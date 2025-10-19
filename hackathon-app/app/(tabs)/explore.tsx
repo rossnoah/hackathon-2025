@@ -1,103 +1,24 @@
-import { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, RefreshControl, SafeAreaView } from 'react-native';
+import { useState, useMemo } from 'react';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, SafeAreaView, Image } from 'react-native';
 import { useScreenTime } from '@/hooks/useScreenTime';
 
 const DISTRACTION_APPS = ['TikTok', 'Instagram', 'Twitter', 'Reddit', 'YouTube'];
 
-// Comprehensive app logo mapping with proper brand colors and symbols
-const APP_LOGOS: { [key: string]: string } = {
-  // Social Media
-  'tiktok': '🎬',
-  'instagram': '📷',
-  'twitter': '𝕏',
-  'x.com': '𝕏',
-  'reddit': '🔴',
-  'youtube': '▶️',
-  'youtube tv': '▶️',
-  'facebook': '👤',
-  'snapchat': '👻',
-  'pinterest': '📌',
-  'linkedin': '🔗',
-  'twitch': '🟣',
-  
-  // Messaging
-  'messages': '💬',
-  'sms': '💬',
-  'telegram': '✈️',
-  'whatsapp': '💚',
-  'discord': '⚫',
-  'slack': '🟦',
-  'skype': '🔵',
-  
-  // Browsers
-  'chrome': '🔵',
-  'google chrome': '🔵',
-  'chromium': '🔵',
-  'firefox': '🦊',
-  'safari': '🧭',
-  'edge': '🔵',
-  'opera': '🔴',
-  
-  // Music & Entertainment
-  'spotify': '🟢',
-  'apple music': '🎵',
-  'youtube music': '🎵',
-  'netflix': '🔴',
-  'hulu': '🟢',
-  'disney': '🔵',
-  'amazon prime': '🟠',
-  
-  // Productivity
-  'notion': '⬜',
-  'gmail': '📧',
-  'outlook': '📧',
-  'mail': '📧',
-  'calendar': '📅',
-  'drive': '🔵',
-  'google drive': '🔵',
-  'onedrive': '🔵',
-  'dropbox': '🔵',
-  'icloud': '☁️',
-  
-  // Communication
-  'zoom': '🔵',
-  'teams': '🟦',
-  'google meet': '🔵',
-  'webex': '🔵',
-  
-  // News & Reading
-  'medium': '⬛',
-  'news': '📰',
-  'pocket': '🔴',
-  'kindle': '⬛',
-  
-  // Work & Dev
-  'github': '⬛',
-  'gitlab': '🟠',
-  'bitbucket': '🔵',
-  'vscode': '🔵',
-  'jira': '🔵',
-  'trello': '🔵',
-  
-  // Shopping
-  'amazon': '🟠',
-  'ebay': '🔴',
-  'aliexpress': '🔴',
-  'shopify': '🟢',
-  
-  // Finance
-  'paypal': '🔵',
-  'stripe': '🔵',
-  'square': '🔵',
-  'venmo': '🔵',
-  'robinhood': '🟢',
-  
-  // Health & Fitness
-  'fitness': '💪',
-  'health': '❤️',
-  'strava': '🟠',
-  'peloton': '⬛',
-};
+// Emojis for common apps
+function getAppIcon(name: string) {
+  const key = name.toLowerCase();
+  try {
+    if (key.includes('tiktok')) return require('../../assets/images/app-logos/tiktok.png');
+    if (key.includes('instagram')) return require('../../assets/images/app-logos/instagram.png');
+    if (key.includes('twitter') || key.includes('x')) return require('../../assets/images/app-logos/twitter.png');
+    if (key.includes('reddit')) return require('../../assets/images/app-logos/reddit.png');
+    if (key.includes('youtube')) return require('../../assets/images/app-logos/youtube.png');
+    if (key.includes('spotify')) return require('../../assets/images/app-logos/spotify.png');
+    if (key.includes('chrome')) return require('../../assets/images/app-logos/chrome.png');
+    if (key.includes('message') || key.includes('imessage') || key.includes('sms')) return require('../../assets/images/app-logos/imessage.png');
+  } catch (e) {}
+  return require('../../assets/images/icon.png');
+}
 
 export default function ScreenTimeScreen() {
   const { screenTimeData, isLoading, refreshScreenTimeData } = useScreenTime();
@@ -122,13 +43,21 @@ export default function ScreenTimeScreen() {
     return DISTRACTION_APPS.some(app => appName.toLowerCase().includes(app.toLowerCase()));
   };
 
-  const getAppLogo = (appName: string): string => {
-    const key = appName.toLowerCase();
-    for (const [appKey, logo] of Object.entries(APP_LOGOS)) {
-      if (key.includes(appKey)) return logo;
-    }
-    return '📱';
+  const getAppLogo = (appName: string) => {
+    return getAppIcon(appName);
   };
+
+  const distractionMinutes = useMemo(() => {
+    if (!screenTimeData) return 0;
+    return screenTimeData.appUsage
+      .filter(a => isDistractionApp(a.appName))
+      .reduce((sum, a) => sum + a.usageMinutes, 0);
+  }, [screenTimeData]);
+
+  const distractionPct = useMemo(() => {
+    if (!screenTimeData || screenTimeData.totalUsageMinutes === 0) return 0;
+    return Math.round((distractionMinutes / screenTimeData.totalUsageMinutes) * 100);
+  }, [screenTimeData, distractionMinutes]);
 
   if (isLoading) {
     return (
@@ -155,13 +84,40 @@ export default function ScreenTimeScreen() {
         {screenTimeData && (
           <>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>Total Usage</Text>
-              <Text style={styles.summaryTime}>
-                {formatMinutes(screenTimeData.totalUsageMinutes)}
-              </Text>
-              <Text style={styles.summaryApps}>
-                {screenTimeData.appUsage.length} apps used today
-              </Text>
+              <View style={styles.summaryHeaderRow}>
+                <Text style={styles.summaryTitle}>Today</Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.summaryMetricLabel}>Total usage</Text>
+                  <Text style={styles.summaryTime}>
+                    {formatMinutes(screenTimeData.totalUsageMinutes)}
+                  </Text>
+                </View>
+                <View style={styles.summaryDivider} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.summaryMetricLabel}>Distractions</Text>
+                  <Text style={[styles.summaryTime, { color: distractionPct > 40 ? '#ff6b6b' : distractionPct > 20 ? '#ff9800' : '#fff' }]}>
+                    {distractionPct}%
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.progressBarContainer}>
+                <View style={styles.progressTrack}>
+                  <View style={[styles.progressFill, { width: `${Math.min(distractionPct, 100)}%`, backgroundColor: distractionPct > 40 ? '#ff6b6b' : distractionPct > 20 ? '#ff9800' : '#10b981' }]} />
+                </View>
+                <Text style={styles.progressHint}>{distractionMinutes} min on distraction apps</Text>
+              </View>
+
+              <View style={styles.topChipsRow}>
+                {screenTimeData.appUsage.slice(0, 3).map((app, idx) => (
+                  <View key={`${app.packageName}-${idx}`} style={styles.chip}>
+                    <Image source={getAppLogo(app.appName)} style={styles.chipIcon} />
+                    <Text style={styles.chipText}>{app.appName} · {formatMinutes(app.usageMinutes)}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
 
             <View style={styles.appsSection}>
@@ -173,7 +129,7 @@ export default function ScreenTimeScreen() {
                 ]}>
                   <View style={styles.appHeader}>
                     <View style={styles.appNameContainer}>
-                      <Text style={styles.appLogo}>{getAppLogo(app.appName)}</Text>
+                      <Image source={getAppLogo(app.appName)} style={styles.appIcon} />
                       <View style={styles.appInfo}>
                         <Text style={styles.appName}>{app.appName}</Text>
                         {isDistractionApp(app.appName) && (
@@ -188,16 +144,18 @@ export default function ScreenTimeScreen() {
                       {formatMinutes(app.usageMinutes)}
                     </Text>
                   </View>
-                  <View style={styles.progressBarContainer}>
-                    <View
-                      style={[
-                        styles.progressBar,
-                        isDistractionApp(app.appName) && styles.progressBarWarning,
-                        {
-                          width: `${(app.usageMinutes / screenTimeData.totalUsageMinutes) * 100}%`,
-                        },
-                      ]}
-                    />
+                  <View style={styles.progressRow}>
+                    <View style={styles.progressBarContainerItem}>
+                      <View
+                        style={[
+                          styles.progressBar,
+                          isDistractionApp(app.appName) && styles.progressBarWarning,
+                          {
+                            width: `${(app.usageMinutes / screenTimeData.totalUsageMinutes) * 100}%`,
+                          },
+                        ]}
+                      />
+                    </View>
                   </View>
                   {app.lastUsed && (
                     <Text style={styles.appLastUsed}>
@@ -207,8 +165,6 @@ export default function ScreenTimeScreen() {
                 </View>
               ))}
             </View>
-
-
           </>
         )}
       </ScrollView>
@@ -252,35 +208,95 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   summaryCard: {
-    backgroundColor: '#007bff',
-    padding: 24,
+    backgroundColor: '#0f172a',
+    padding: 20,
     borderRadius: 16,
     marginBottom: 20,
-    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 5,
   },
-  summaryTitle: {
-    fontSize: 14,
-    color: '#fff',
-    opacity: 0.9,
+  summaryHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
+  },
+  summaryTitle: {
+    fontSize: 12,
+    color: '#94a3b8',
     textTransform: 'uppercase',
     letterSpacing: 1,
+    fontWeight: '700',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  summaryMetricLabel: {
+    color: '#cbd5e1',
+    fontSize: 12,
   },
   summaryTime: {
-    fontSize: 48,
-    fontWeight: 'bold',
+    fontSize: 36,
+    fontWeight: '800',
     color: '#fff',
+  },
+  summaryDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    marginHorizontal: 12,
+  },
+  progressBarContainer: {
+    marginTop: 14,
+  },
+  progressTrack: {
+    height: 8,
+    backgroundColor: '#1e293b',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  progressHint: {
+    color: '#94a3b8',
+    fontSize: 12,
+    marginTop: 6,
+  },
+  topChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 12,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    marginRight: 8,
     marginBottom: 8,
   },
-  summaryApps: {
-    fontSize: 14,
-    color: '#fff',
-    opacity: 0.9,
+  chipText: {
+    color: '#E5E7EB',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  chipIcon: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    marginRight: 6,
+    resizeMode: 'contain',
   },
 
   appsSection: {
@@ -315,33 +331,34 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 12,
   },
-   appNameContainer: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     flex: 1,
-     marginRight: 12,
-   },
-   appLogo: {
-     fontSize: 32,
-     marginRight: 12,
-     width: 40,
-     textAlign: 'center',
-   },
-   appInfo: {
-     flex: 1,
-     justifyContent: 'center',
-   },
-   appName: {
-     fontSize: 16,
-     fontWeight: 'bold',
-     color: '#333',
-   },
-   warningTag: {
-     fontSize: 11,
-     color: '#ff9800',
-     fontWeight: '600',
-     marginTop: 4,
-   },
+  appNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
+  },
+  appIcon: {
+    width: 32,
+    height: 32,
+    marginRight: 12,
+    borderRadius: 6,
+    resizeMode: 'contain',
+  },
+  appInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  appName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  warningTag: {
+    fontSize: 11,
+    color: '#ff9800',
+    fontWeight: '600',
+    marginTop: 4,
+  },
   appTime: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -350,17 +367,17 @@ const styles = StyleSheet.create({
   appTimeWarning: {
     color: '#ff9800',
   },
-  appPackage: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 4,
-  },
   appLastUsed: {
     fontSize: 12,
     color: '#999',
     marginTop: 8,
   },
-  progressBarContainer: {
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  progressBarContainerItem: {
+    flex: 1,
     height: 6,
     backgroundColor: '#e9ecef',
     borderRadius: 3,
@@ -371,7 +388,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#007bff',
     borderRadius: 3,
   },
-   progressBarWarning: {
-     backgroundColor: '#ff9800',
-   },
- });
+  progressBarWarning: {
+    backgroundColor: '#ff9800',
+  },
+});
