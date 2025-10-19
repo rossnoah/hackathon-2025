@@ -148,14 +148,13 @@ export default function FriendsScreen() {
         }
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Friends Leaderboard</Text>
-        </View>
-
-        <View style={styles.leaderboardSection}>
+          <Text style={styles.title}>Friends</Text>
           <Text style={styles.sectionSubtitle}>
             Ranked by total screen time 📱
           </Text>
+        </View>
 
+        <View style={styles.leaderboardSection}>
           {leaderboard.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateEmoji}>📊</Text>
