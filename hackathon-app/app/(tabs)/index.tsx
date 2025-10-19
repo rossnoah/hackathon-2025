@@ -200,18 +200,22 @@ export default function DashboardScreen() {
                 <Text style={styles.cardMeta}>Today</Text>
               </View>
 
-              <View style={styles.percentRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.metricLabel}>% of your day</Text>
-                  {!!insights.totalScreenTimeMinutes && (
-                    <Text style={styles.metricSub}>
-                      {insights.totalScreenTimeMinutes} min total usage
-                    </Text>
-                  )}
+              <View style={styles.percentHero}>
+                <View style={styles.heroBg}>
+                  <View style={[styles.heroOrb, { top: -30, left: -30, backgroundColor: "#60a5fa" }]} />
+                  <View style={[styles.heroOrb, { bottom: -40, right: -20, backgroundColor: "#a78bfa" }]} />
                 </View>
                 <Text style={styles.screenTimePercentage}>
-                  {insights.socialMediaPercentage}%
+                  {Math.round(insights.socialMediaPercentage || 0)}%
                 </Text>
+                <Text style={styles.percentCaption}>
+                  of your day on social media
+                </Text>
+                {!!insights.totalScreenTimeMinutes && (
+                  <Text style={styles.metricSubCenter}>
+                    {insights.totalScreenTimeMinutes} min total usage
+                  </Text>
+                )}
               </View>
 
               <View style={styles.progressBarTrack}>
@@ -398,6 +402,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 5,
+    position: "relative",
+    overflow: "hidden",
   },
   cardHeaderRow: {
     flexDirection: "row",
@@ -434,17 +440,21 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   screenTimePercentage: {
-    fontSize: 48,
+    fontSize: 56,
     fontWeight: "800",
-    color: "#1f2937",
-    marginLeft: 12,
+    color: "#111827",
+    marginLeft: 0,
+    letterSpacing: -1,
+    textShadowColor: "rgba(59,130,246,0.15)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
   },
   progressBarTrack: {
-    height: 8,
-    backgroundColor: "#e5e7eb",
-    borderRadius: 4,
+    height: 10,
+    backgroundColor: "#eef2f7",
+    borderRadius: 999,
     overflow: "hidden",
-    marginTop: 8,
+    marginTop: 10,
   },
   progressBarFill: {
     height: "100%",
@@ -478,6 +488,40 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginRight: 6,
     resizeMode: "contain",
+  },
+  percentHero: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 6,
+    marginBottom: 10,
+    paddingVertical: 10,
+  },
+  heroBg: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  heroOrb: {
+    position: "absolute",
+    width: 140,
+    height: 140,
+    opacity: 0.12,
+    borderRadius: 9999,
+  },
+  percentCaption: {
+    textAlign: "center",
+    color: "#6b7280",
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: 4,
+  },
+  metricSubCenter: {
+    textAlign: "center",
+    color: "#6b7280",
+    fontSize: 12,
+    marginTop: 4,
   },
   ctaButton: {
     backgroundColor: "rgba(59,130,246,0.15)",
