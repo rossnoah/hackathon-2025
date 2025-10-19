@@ -296,7 +296,7 @@
       document.getElementById('userCount').textContent = users.length;
       document.getElementById('assignmentCount').textContent = assignments.length;
       document.getElementById('activeTokens').textContent =
-        users.filter(u => u.push_token).length;
+        users.filter(u => u.pushToken).length;
     }
 
     function renderUsers() {
@@ -309,9 +309,9 @@
       tbody.innerHTML = users.map(user => `
         <tr>
           <td>${user.email}</td>
-          <td>${user.push_token ? user.push_token.substring(0, 20) + '...' : 'Not registered'}</td>
-          <td>${new Date(user.created_at).toLocaleDateString()}</td>
-          <td>${new Date(user.last_seen).toLocaleString()}</td>
+          <td>${user.pushToken ? user.pushToken.substring(0, 20) + '...' : 'Not registered'}</td>
+          <td>${new Date(user.createdAt).toLocaleDateString()}</td>
+          <td>${new Date(user.lastSeen).toLocaleString()}</td>
           <td>
             <button class="btn btn-small" onclick="sendToUser('${user.email}')">
               Send Notification
