@@ -1,0 +1,40 @@
+# Node modules
+node_modules
+api/node_modules
+hackathon-app/node_modules
+
+# Git
+.git
+.gitignore
+
+# Environment files (will be set in Coolify)
+.env
+api/.env
+
+# Local development
+*.log
+npm-debug.log*
+.DS_Store
+
+# IDE
+.vscode
+.idea
+
+# Mobile app (not needed for server)
+hackathon-app
+
+# Chrome extension (not needed for server)
+chrome-extension
+
+# Documentation
+README.md
+CLAUDE.md
+
+# Build artifacts
+dist
+build
+
+# SQLite database (will be persisted via volume)
+*.db
+*.db-shm
+*.db-wal

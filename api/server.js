@@ -17,7 +17,7 @@ const openai = new OpenAI({
 });
 
 // Initialize SQLite database
-const db = new Database("hackathon.db");
+const db = new Database(path.join(__dirname, "hackathon.db"));
 
 // Create tables
 db.exec(`
@@ -60,7 +60,12 @@ db.exec(`
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
+
+// Health check endpoint for Docker/Coolify
+app.get("/health", (req, res) => {
+	res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
 
 // Serve dashboard as home page
 app.get("/", (req, res) => {
@@ -95,7 +100,11 @@ app.post("/api/register", (req, res) => {
 			pushToken || null,
 			notificationsEnabled !== undefined ? (notificationsEnabled ? 1 : 0) : 1,
 			pushToken || null,
-			notificationsEnabled !== undefined ? (notificationsEnabled ? 1 : 0) : null,
+			notificationsEnabled !== undefined
+				? notificationsEnabled
+					? 1
+					: 0
+				: null,
 		);
 
 		res.json({
@@ -329,7 +338,8 @@ app.get("/api/insights/:email", async (req, res) => {
 		if (!latestScreentime) {
 			return res.json({
 				hasSocialMediaData: false,
-				message: "Start tracking your screen time to get personalized insights!",
+				message:
+					"Start tracking your screen time to get personalized insights!",
 				assignments: assignments || [],
 			});
 		}
@@ -422,9 +432,7 @@ app.post("/api/screentime", (req, res) => {
 		const userExists = userCheckStmt.get(email);
 
 		if (!userExists) {
-			const userInsertStmt = db.prepare(
-				"INSERT INTO users (email) VALUES (?)",
-			);
+			const userInsertStmt = db.prepare("INSERT INTO users (email) VALUES (?)");
 			userInsertStmt.run(email);
 		}
 

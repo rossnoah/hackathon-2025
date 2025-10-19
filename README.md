@@ -8,14 +8,17 @@ A complete assignment tracking system that syncs Moodle assignments to a mobile 
 
 ```
 hackathon/
-├── server.js              # Express server with SQLite, OpenAI GPT-4o, Expo push
-├── hackathon.db           # SQLite database (auto-generated)
-├── package.json           # Server dependencies
-├── .env                   # Server environment variables (not committed)
+├── api/                   # Express API server
+│   ├── server.js          # Express server with SQLite, OpenAI GPT-4o, Expo push
+│   ├── package.json       # Server dependencies
+│   ├── package-lock.json  # Locked dependency versions
+│   ├── .env               # Server environment variables (not committed)
+│   ├── hackathon.db       # SQLite database (auto-generated)
+│   ├── public/            # Admin web dashboard
+│   │   └── dashboard.html # Web-based admin interface
+│   └── README.md          # API documentation
 ├── CLAUDE.md              # Complete technical documentation
 ├── README.md              # This file
-├── public/
-│   └── dashboard.html    # Admin web dashboard
 ├── hackathon-app/         # Expo React Native app
 │   ├── app/              # App routes (Expo Router)
 │   │   ├── index.tsx     # Entry point & auth routing
@@ -66,16 +69,20 @@ hackathon/
 ### 1. Install Server Dependencies
 
 ```bash
+cd api
 npm install
 ```
 
 ### 2. Configure Environment Variables
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the `api` directory:
 
 ```bash
+cd api
+cat > .env << EOF
 PORT=4000
 OPENAI_API_KEY=sk-proj-your-api-key-here
+EOF
 ```
 
 Get your OpenAI API key from [platform.openai.com](https://platform.openai.com/api-keys)
@@ -83,12 +90,14 @@ Get your OpenAI API key from [platform.openai.com](https://platform.openai.com/a
 ### 3. Start the Express Server
 
 ```bash
+cd api
 npm run dev
 ```
 
 The server will run on `http://localhost:4000`
 
 The server will:
+
 - Create `hackathon.db` SQLite database automatically
 - Start cron job for AI-powered notifications (every 60 seconds)
 - Serve admin dashboard at `http://localhost:4000`
@@ -158,6 +167,7 @@ npx expo start
 **Important:** Push notifications only work on physical devices!
 
 **User Flow:**
+
 1. Enter your email on the onboarding screen
 2. Grant notification permissions
 3. View the dashboard (empty initially)
@@ -183,9 +193,11 @@ See [Chrome Extension README](chrome-extension/README.md) for detailed instructi
 ## API Endpoints
 
 ### POST /api/register
+
 Register a user with email and/or push token.
 
 **Request Body:**
+
 ```json
 {
   "email": "student@lafayette.edu",
@@ -194,6 +206,7 @@ Register a user with email and/or push token.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -202,9 +215,11 @@ Register a user with email and/or push token.
 ```
 
 ### GET /api/users
+
 Get all registered users.
 
 **Response:**
+
 ```json
 {
   "count": 5,
@@ -220,12 +235,14 @@ Get all registered users.
 ```
 
 ### POST /api/send-notification
+
 Send a push notification to specific user(s).
 
 **Request Body:**
+
 ```json
 {
-  "email": "student@lafayette.edu",  // Optional: specific user
+  "email": "student@lafayette.edu", // Optional: specific user
   "title": "Notification Title",
   "body": "Notification message body",
   "data": {
@@ -235,6 +252,7 @@ Send a push notification to specific user(s).
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -244,9 +262,11 @@ Send a push notification to specific user(s).
 ```
 
 ### POST /api/assignments
+
 Sync assignments from Chrome extension (replaces all existing assignments for user).
 
 **Request Body:**
+
 ```json
 {
   "email": "student@lafayette.edu",
@@ -269,6 +289,7 @@ Sync assignments from Chrome extension (replaces all existing assignments for us
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -277,9 +298,11 @@ Sync assignments from Chrome extension (replaces all existing assignments for us
 ```
 
 ### GET /api/assignments?email=student@lafayette.edu
+
 Get assignments for a specific user.
 
 **Response:**
+
 ```json
 {
   "email": "student@lafayette.edu",
@@ -293,12 +316,14 @@ Get assignments for a specific user.
 ### Complete Data Flow
 
 1. **User Onboarding:**
+
    - User enters email on mobile app
    - App saves email to AsyncStorage
    - App requests notification permissions
    - App generates Expo Push Token and registers with server
 
 2. **Assignment Syncing:**
+
    - User opens Chrome extension on Moodle calendar page
    - Extension scrapes assignment data from DOM
    - Extension sends assignments to server with user email
@@ -306,6 +331,7 @@ Get assignments for a specific user.
    - Server sends push notification to user
 
 3. **AI-Powered Notifications:**
+
    - Cron job runs every 60 seconds
    - Server queries users with push tokens
    - For each user with assignments:
@@ -323,6 +349,7 @@ Get assignments for a specific user.
 ### Example AI Notification
 
 GPT-4o receives:
+
 ```
 Assignments:
 - Philosophy Essay (Due: Tomorrow, 11:59 PM)
@@ -331,6 +358,7 @@ Assignments:
 ```
 
 GPT-4o generates:
+
 > "Still working on that Philosophy essay? The deadline won't extend itself... 📝"
 
 ## Admin Dashboard
@@ -338,6 +366,7 @@ GPT-4o generates:
 Access the web dashboard at your server URL (e.g., `http://localhost:4000` or `https://your-ngrok-url.ngrok-free.app`)
 
 **Features:**
+
 - View all registered users with push tokens
 - See all assignments across all users
 - Filter assignments by email
@@ -362,6 +391,7 @@ Access the web dashboard at your server URL (e.g., `http://localhost:4000` or `h
 ### Manual API Testing
 
 **Send a custom notification:**
+
 ```bash
 curl -X POST https://your-ngrok-url.ngrok-free.app/api/send-notification \
   -H "Content-Type: application/json" \
@@ -374,12 +404,14 @@ curl -X POST https://your-ngrok-url.ngrok-free.app/api/send-notification \
 ```
 
 **Get all users:**
+
 ```bash
 curl https://your-ngrok-url.ngrok-free.app/api/users \
   -H "ngrok-skip-browser-warning: true"
 ```
 
 **Get assignments for a user:**
+
 ```bash
 curl "https://your-ngrok-url.ngrok-free.app/api/assignments?email=student@lafayette.edu" \
   -H "ngrok-skip-browser-warning: true"
@@ -406,11 +438,12 @@ When developing locally, your server runs on `localhost:4000`, which is only acc
 
 Keep these running in separate terminals:
 
-1. **Terminal 1:** `npm run dev` (server)
+1. **Terminal 1:** `cd api && npm run dev` (server)
 2. **Terminal 2:** `ngrok http 4000` (tunnel)
 3. **Terminal 3:** `cd hackathon-app && npx expo start` (app)
 
 If ngrok restarts and the URL changes:
+
 1. Copy the new URL
 2. Update `hackathon-app/.env`
 3. Restart the Expo app
@@ -418,11 +451,13 @@ If ngrok restarts and the URL changes:
 ## Mobile App Screens
 
 ### 1. Onboarding Screen (`app/onboarding.tsx`)
+
 - Email input field
 - Registration button
 - Automatic navigation to dashboard after registration
 
 ### 2. Dashboard (`app/(tabs)/index.tsx`)
+
 - Header with user email
 - Assignment cards with course, date, time, description
 - Pull-to-refresh functionality
@@ -431,29 +466,34 @@ If ngrok restarts and the URL changes:
 - SafeAreaView for notch support
 
 ### 3. Settings (`app/(tabs)/settings.tsx`)
+
 - Account section showing email
 - Notification toggle switch
 - Sign out button with confirmation dialog
 - App version footer
 
 ### 4. Explore Tab (`app/(tabs)/explore.tsx`)
+
 - Example screen with app documentation
 
 ## Troubleshooting
 
 ### AI Notifications Not Generating
+
 - Check that `OPENAI_API_KEY` is set correctly in `.env`
 - Verify OpenAI API key is valid and has credits
 - Check server logs for OpenAI errors
 - Fallback messages will be used if GPT-4o fails
 
 ### Notifications Not Appearing
+
 - Grant notification permissions in Settings screen
 - Use a **physical device** (simulators don't support push)
 - On iOS, close app completely to see banners
 - Verify push token is registered via admin dashboard
 
 ### Cannot Connect to Server
+
 - Check server is running on port 4000
 - Verify ngrok is running: `curl https://your-ngrok-url.ngrok-free.app/`
 - Update `hackathon-app/.env` with correct ngrok URL
@@ -461,6 +501,7 @@ If ngrok restarts and the URL changes:
 - Ensure `ngrok-skip-browser-warning` header is included
 
 ### Assignments Not Syncing
+
 - Use same email in mobile app and Chrome extension
 - Navigate to Moodle calendar page before clicking extension
 - Check server logs for POST /api/assignments errors
@@ -468,6 +509,7 @@ If ngrok restarts and the URL changes:
 - Check admin dashboard to verify assignments were stored
 
 ### Chrome Extension Not Working
+
 - Enable Developer Mode in chrome://extensions
 - Reload extension after making changes
 - Check browser console for errors
@@ -479,12 +521,14 @@ If ngrok restarts and the URL changes:
 The server uses SQLite with the following schema:
 
 **users table:**
+
 - `email` (TEXT PRIMARY KEY)
 - `push_token` (TEXT)
 - `created_at` (DATETIME)
 - `last_seen` (DATETIME)
 
 **assignments table:**
+
 - `id` (TEXT PRIMARY KEY)
 - `email` (TEXT, FOREIGN KEY)
 - `course_id`, `title`, `course`, `date`, `time`
@@ -492,7 +536,9 @@ The server uses SQLite with the following schema:
 - `extracted_at`, `created_at`
 
 **Access database:**
+
 ```bash
+cd api
 sqlite3 hackathon.db
 .tables
 SELECT * FROM users;
@@ -533,6 +579,7 @@ SELECT * FROM assignments;
 ## Tech Stack
 
 **Server:**
+
 - Express.js
 - better-sqlite3 (SQLite database)
 - expo-server-sdk (push notifications)
@@ -541,6 +588,7 @@ SELECT * FROM assignments;
 - dotenv, cors
 
 **Mobile App:**
+
 - React Native
 - Expo (SDK 52+)
 - Expo Router (file-based routing)
@@ -549,11 +597,13 @@ SELECT * FROM assignments;
 - AsyncStorage
 
 **Chrome Extension:**
+
 - Manifest V3
 - Vanilla JavaScript
 - DOM scraping
 
 **Dev Tools:**
+
 - ngrok (tunneling)
 - nodemon (auto-restart)
 

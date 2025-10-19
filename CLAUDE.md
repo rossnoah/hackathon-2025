@@ -16,7 +16,7 @@ A complete assignment tracking system that syncs Moodle assignments to a mobile 
 ┌─────────────────┐     ┌──────────────┐
 │ Chrome Extension│────→│ Express.js   │
 │  (popup.js)     │     │   Server     │
-└─────────────────┘     │  (server.js) │
+└─────────────────┘     │(api/server.js)│
                         └──────┬───────┘
                                │
                     ┌──────────┼──────────┐
@@ -40,12 +40,14 @@ A complete assignment tracking system that syncs Moodle assignments to a mobile 
 **Purpose**: Scrapes assignments from Lafayette College's Moodle calendar and sends to server.
 
 **Files**:
+
 - `manifest.json` - Extension configuration (Manifest V3)
 - `content.js` - DOM scraping script that extracts assignment data
 - `popup.html` - Extension popup UI
 - `popup.js` - Popup logic and API communication
 
 **How it works**:
+
 1. User enters their email and server URL in popup
 2. Clicks "Sync Assignments" button
 3. Opens Moodle calendar page (if not already there)
@@ -57,6 +59,7 @@ A complete assignment tracking system that syncs Moodle assignments to a mobile 
 6. Triggers push notification to user
 
 **Key Functions**:
+
 ```javascript
 // In content.js
 function extractAssignments() {
@@ -74,11 +77,12 @@ async function extractAndSend(tabId, serverUrl, email) {
 }
 ```
 
-### 2. Express Server (`/server.js`)
+### 2. Express Server (`/api/server.js`)
 
 **Purpose**: Central backend handling user registration, assignment storage, notifications, and AI-generated reminders.
 
 **Dependencies**:
+
 ```json
 {
   "express": "Web server framework",
@@ -92,6 +96,7 @@ async function extractAndSend(tabId, serverUrl, email) {
 ```
 
 **Database Schema**:
+
 ```sql
 -- Users table
 CREATE TABLE users (
@@ -133,21 +138,22 @@ CREATE TABLE screentime (
 
 **API Endpoints**:
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | Serves admin dashboard |
-| POST | `/api/register` | Register user with email and/or push token |
-| POST | `/api/send-notification` | Send push notification to user(s) |
-| GET | `/api/users` | Get all registered users |
-| POST | `/api/assignments` | Store assignments for a user (replaces old ones) |
-| GET | `/api/assignments?email=X` | Get assignments for user |
-| POST | `/api/screentime` | Store user's app usage data |
-| GET | `/api/insights/:email` | Get AI insights about procrastination + personalized message |
+| Method | Endpoint                   | Description                                                  |
+| ------ | -------------------------- | ------------------------------------------------------------ |
+| GET    | `/`                        | Serves admin dashboard                                       |
+| POST   | `/api/register`            | Register user with email and/or push token                   |
+| POST   | `/api/send-notification`   | Send push notification to user(s)                            |
+| GET    | `/api/users`               | Get all registered users                                     |
+| POST   | `/api/assignments`         | Store assignments for a user (replaces old ones)             |
+| GET    | `/api/assignments?email=X` | Get assignments for user                                     |
+| POST   | `/api/screentime`          | Store user's app usage data                                  |
+| GET    | `/api/insights/:email`     | Get AI insights about procrastination + personalized message |
 
 **AI-Powered Notifications**:
+
 ```javascript
 // Runs every 60 seconds
-cron.schedule('*/1 * * * *', async () => {
+cron.schedule("*/1 * * * *", async () => {
   // 1. Get all users with push tokens
   // 2. For each user with assignments:
   //    a. Generate Duolingo-style message with GPT-4o
@@ -156,6 +162,7 @@ cron.schedule('*/1 * * * *', async () => {
 ```
 
 **GPT-4o Prompt**:
+
 - Model: `gpt-4o`
 - Temperature: `1.0` (high creativity)
 - System role: "Witty, passive-aggressive notification bot like Duolingo"
@@ -163,6 +170,7 @@ cron.schedule('*/1 * * * *', async () => {
 - Output: Short (2 sentences max), funny, personalized reminder
 
 **Example Generated Messages**:
+
 - "Still working on that Philosophy essay? The deadline won't extend itself... 📝"
 - "3 assignments due soon! Let's knock them out before they multiply 💪"
 - "I'm not mad, just disappointed you haven't checked your assignments yet 📚"
@@ -174,12 +182,14 @@ cron.schedule('*/1 * * * *', async () => {
 **Purpose**: Mobile interface for viewing assignments and receiving push notifications.
 
 **Tech Stack**:
+
 - Expo Router (file-based routing)
 - TypeScript
 - AsyncStorage (local persistence)
 - Expo Notifications
 
 **App Structure**:
+
 ```
 app/
 ├── index.tsx              # Entry point - checks auth, routes to onboarding or tabs
@@ -195,38 +205,42 @@ app/
 **User Flow**:
 
 1. **First Launch** → `index.tsx`
+
    - Shows loading spinner
    - Checks AsyncStorage for `userEmail`
    - No email → routes to `onboarding.tsx`
    - Has email → routes to `(tabs)/index.tsx`
 
 2. **Onboarding** → `onboarding.tsx`
+
    - User enters email
    - Saves to AsyncStorage
    - Registers with server (`POST /api/register`)
    - Routes to dashboard
 
 3. **Dashboard** → `(tabs)/index.tsx` - **Redesigned with AI Insights**
-    - Shows social media percentage (e.g., "31% of your day")
-    - Displays AI-generated guilt/motivation message about procrastination
-    - Shows top 3 apps used with time spent
-    - Displays top 3 urgent assignments in red ("You should really be doing these:")
-    - Lists all assignments below for reference
-    - Pull-to-refresh to update insights
-    - Shows push token status at bottom
+
+   - Shows social media percentage (e.g., "31% of your day")
+   - Displays AI-generated guilt/motivation message about procrastination
+   - Shows top 3 apps used with time spent
+   - Displays top 3 urgent assignments in red ("You should really be doing these:")
+   - Lists all assignments below for reference
+   - Pull-to-refresh to update insights
+   - Shows push token status at bottom
 
 4. **Screen Time Tab** → `(tabs)/explore.tsx` - **Enhanced with Visuals**
-    - Shows total screen time for the day
-    - App emoji indicators (🎬 TikTok, 📸 Instagram, etc.)
-    - Warning badges for distraction apps
-    - Color-coded app cards (orange/red for procrastination apps)
-    - Progress bars showing usage percentage
-    - "Send Screen Time to AI" button
-    - Info card explaining the feature
+   - Shows total screen time for the day
+   - App emoji indicators (🎬 TikTok, 📸 Instagram, etc.)
+   - Warning badges for distraction apps
+   - Color-coded app cards (orange/red for procrastination apps)
+   - Progress bars showing usage percentage
+   - "Send Screen Time to AI" button
+   - Info card explaining the feature
 
 **Key Files**:
 
 `hooks/useNotifications.ts`:
+
 ```typescript
 export function useNotifications() {
   // 1. Requests notification permissions
@@ -238,6 +252,7 @@ export function useNotifications() {
 ```
 
 `app/(tabs)/index.tsx`:
+
 ```typescript
 // Loads user email from AsyncStorage
 // Fetches assignments: GET /api/assignments?email=X
@@ -245,11 +260,12 @@ export function useNotifications() {
 // Pull-to-refresh functionality
 ```
 
-### 4. Admin Dashboard (`/public/dashboard.html`)
+### 4. Admin Dashboard (`/api/public/dashboard.html`)
 
 **Purpose**: Web-based admin panel for monitoring users and sending notifications.
 
 **Features**:
+
 - View all registered users with push tokens
 - See all assignments across all users
 - Filter assignments by email
@@ -258,6 +274,7 @@ export function useNotifications() {
 - Real-time stats (user count, assignment count, active tokens)
 
 **Usage**:
+
 - Accessible at server root URL (e.g., `https://your-ngrok-url.ngrok-free.app`)
 - No authentication (keep private!)
 
@@ -265,30 +282,39 @@ export function useNotifications() {
 
 ### Environment Variables
 
-Create `.env` file in root:
-```env
+Create `.env` file in `api/` directory:
+
+```bash
+cd api
+cat > .env << EOF
 PORT=4000
 OPENAI_API_KEY=sk-proj-...
+EOF
 ```
 
 ### Development Workflow
 
 1. **Start ngrok** (for local development):
+
 ```bash
 ngrok http 4000
 ```
 
 2. **Update mobile app `.env`**:
+
 ```env
 EXPO_PUBLIC_API_URL=https://your-ngrok-url.ngrok-free.app
 ```
 
 3. **Start server**:
+
 ```bash
-node server.js
+cd api
+npm run dev
 ```
 
 4. **Start mobile app**:
+
 ```bash
 cd hackathon-app
 npm start
@@ -301,7 +327,7 @@ npm start
 
 ### First-Time Setup Checklist
 
-- [ ] Run `npm install` in root directory
+- [ ] Run `npm install` in `api/` directory
 - [ ] Run `npm install` in `hackathon-app/` directory
 - [ ] Create `.env` file with OpenAI API key
 - [ ] Start ngrok tunnel
@@ -361,30 +387,35 @@ npm start
 ## Key Technical Decisions
 
 ### Why SQLite?
+
 - Simple, file-based database
 - No external dependencies
 - Perfect for hackathon/prototype
 - Easy to inspect (`hackathon.db` file)
 
 ### Why Expo Router?
+
 - File-based routing (like Next.js)
 - Built-in navigation
 - Easy deep linking support
 - Modern React Native architecture
 
 ### Why node-cron?
+
 - Simple scheduling
 - Runs in-process (no external scheduler needed)
 - Good for development/prototyping
 - Production note: Use proper job queue (Bull, Agenda) for scale
 
 ### Why GPT-4o for Notifications?
+
 - Generates creative, varied messages
 - Personalizes based on assignment context
 - Makes notifications feel fresh (not repetitive)
 - Duolingo-style engagement = better retention
 
 ### Why Chrome Extension vs. Mobile Scraping?
+
 - Moodle requires authentication
 - Extension has access to logged-in session
 - Avoid credential storage/handling
@@ -393,35 +424,45 @@ npm start
 ## Common Issues & Solutions
 
 ### Issue: Push notifications not working
+
 **Solution**:
+
 - Must use physical device (not simulator)
 - Check push token is registered in database
 - Verify ngrok URL is correct in mobile app
 - Check server logs for notification errors
 
 ### Issue: Chrome extension can't find assignments
+
 **Solution**:
+
 - Make sure you're on Moodle calendar page
 - URL should contain `moodle.lafayette.edu/calendar`
 - Extension auto-opens correct page if not there
 - Check console for extraction logs
 
 ### Issue: App shows black screen
+
 **Solution**:
+
 - Check `index.tsx` is routing correctly
 - Clear AsyncStorage: `AsyncStorage.clear()`
 - Restart app
 - Check for navigation loops in logs
 
 ### Issue: GPT-4o notifications fail
+
 **Solution**:
+
 - Verify OpenAI API key in `.env`
 - Check API quota/billing
 - Fallback messages will be used automatically
 - Check server logs for OpenAI errors
 
 ### Issue: Assignments not showing in app
+
 **Solution**:
+
 - Pull to refresh dashboard
 - Check server logs - assignments stored?
 - Verify email matches in extension and app
@@ -455,6 +496,7 @@ DELETE FROM assignments;
 ```
 
 Access database:
+
 ```bash
 sqlite3 hackathon.db
 ```
@@ -464,6 +506,7 @@ sqlite3 hackathon.db
 ⚠️ **This is a hackathon project - NOT production-ready**
 
 Security concerns:
+
 - No authentication on API endpoints
 - No rate limiting
 - OpenAI API key in server .env (not rotated)
@@ -473,6 +516,7 @@ Security concerns:
 - Push tokens stored in plaintext
 
 For production, add:
+
 - JWT authentication
 - Rate limiting (express-rate-limit)
 - API key rotation
@@ -485,6 +529,7 @@ For production, add:
 ## Future Enhancements
 
 **Potential Features**:
+
 - [ ] Assignment completion tracking (checkboxes)
 - [ ] Due date reminders (X days before)
 - [ ] Smart notification timing (based on user activity)
@@ -504,6 +549,7 @@ For production, add:
 - [ ] Android widget
 
 **Technical Improvements**:
+
 - [ ] Add tests (Jest, Detox)
 - [ ] Add error boundaries
 - [ ] Improve TypeScript types
@@ -522,6 +568,7 @@ For production, add:
 ### Server Deployment (Production)
 
 **Option 1: Railway/Render/Fly.io**
+
 ```bash
 # Set environment variables
 OPENAI_API_KEY=...
@@ -532,12 +579,14 @@ git push origin main
 ```
 
 **Option 2: VPS (Digital Ocean, AWS)**
+
 ```bash
 # Install Node.js
 # Clone repo
-# Install dependencies
+cd api
+npm install
 # Set up PM2
-pm2 start server.js
+pm2 start server.js --name hackathon-api
 pm2 save
 pm2 startup
 ```
@@ -567,13 +616,16 @@ eas submit --platform android
 ## New Features: Screentime Insights Dashboard
 
 ### Overview
+
 The app now includes an AI-powered procrastination detection system that shows users:
+
 1. **How much time they've spent on social media** (percentage of day)
 2. **AI-generated guilt messages** personalized to their apps and assignments
 3. **Smart recommendations** to focus on urgent work
 4. **Contextual notifications** that call out specific procrastination apps
 
 ### How It Works
+
 1. User tracks screen time in the app
 2. Clicks "Send Screen Time to AI" in Screen Time tab
 3. Data is stored in the database
@@ -586,6 +638,7 @@ The app now includes an AI-powered procrastination detection system that shows u
 6. Cron job later uses same screentime data for contextual push notifications
 
 ### Example Flow
+
 ```
 User spent: 31% on TikTok + Instagram today
 Assignments: Philosophy Essay (due tomorrow), Calculus (due today)
@@ -596,6 +649,7 @@ but unfortunately, TikTok won't help you finish that Calculus assignment!"
 ## Project Stats
 
 **Lines of Code** (approx):
+
 - Server: ~500 lines (+170 new for insights/screentime)
 - Mobile App: ~850 lines (+250 new for dashboard redesign)
 - Chrome Extension: ~210 lines
@@ -603,6 +657,7 @@ but unfortunately, TikTok won't help you finish that Calculus assignment!"
 - **Total**: ~1,980 lines
 
 **Technologies Used**: 15
+
 - Node.js, Express, SQLite, OpenAI (GPT-4o), Expo
 - React Native, TypeScript, AsyncStorage
 - Chrome Extensions API, node-cron
@@ -624,6 +679,7 @@ MIT (or whatever you want - it's a hackathon project!)
 **Last Updated**: 2025-10-18
 
 ### Recent Updates (Oct 18, 2025)
+
 - ✨ Added Screentime Insights Dashboard with AI-generated messages
 - 🎨 Completely redesigned home dashboard to show procrastination data first
 - 📊 Enhanced Screen Time tab with visual indicators and warnings

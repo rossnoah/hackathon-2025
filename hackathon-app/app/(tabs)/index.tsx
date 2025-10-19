@@ -69,7 +69,7 @@ export default function DashboardScreen() {
     };
 
     sendScreenTime();
-  }, [screenTimeData, email]);
+  }, [screenTimeData, email, sendScreenTimeToServer]);
 
   const loadUserData = async () => {
     try {
@@ -152,14 +152,22 @@ export default function DashboardScreen() {
   const getAppIcon = (name: string) => {
     const k = name.toLowerCase();
     try {
-      if (k.includes("tiktok")) return require("../../assets/images/app-logos/tiktok.png");
-      if (k.includes("instagram")) return require("../../assets/images/app-logos/instagram.png");
-      if (k.includes("twitter") || k.includes("x")) return require("../../assets/images/app-logos/twitter.png");
-      if (k.includes("reddit")) return require("../../assets/images/app-logos/reddit.png");
-      if (k.includes("youtube")) return require("../../assets/images/app-logos/youtube.png");
-      if (k.includes("spotify")) return require("../../assets/images/app-logos/spotify.png");
-      if (k.includes("chrome")) return require("../../assets/images/app-logos/chrome.png");
-      if (k.includes("message") || k.includes("imessage") || k.includes("sms")) return require("../../assets/images/app-logos/imessage.png");
+      if (k.includes("tiktok"))
+        return require("../../assets/images/app-logos/tiktok.png");
+      if (k.includes("instagram"))
+        return require("../../assets/images/app-logos/instagram.png");
+      if (k.includes("twitter") || k.includes("x"))
+        return require("../../assets/images/app-logos/twitter.png");
+      if (k.includes("reddit"))
+        return require("../../assets/images/app-logos/reddit.png");
+      if (k.includes("youtube"))
+        return require("../../assets/images/app-logos/youtube.png");
+      if (k.includes("spotify"))
+        return require("../../assets/images/app-logos/spotify.png");
+      if (k.includes("chrome"))
+        return require("../../assets/images/app-logos/chrome.png");
+      if (k.includes("message") || k.includes("imessage") || k.includes("sms"))
+        return require("../../assets/images/app-logos/imessage.png");
     } catch (e) {}
     return require("../../assets/images/icon.png");
   };
@@ -185,7 +193,7 @@ export default function DashboardScreen() {
           <Text style={styles.email}>👋 {email}</Text>
         </View>
 
-        {insights && insights.hasSocialMediaData && (
+        {insights?.hasSocialMediaData && (
           <>
             <View style={styles.screenTimeCard}>
               <View style={styles.cardHeaderRow}>
@@ -228,8 +236,13 @@ export default function DashboardScreen() {
                 <View style={styles.chipsRow}>
                   {insights.topApps.slice(0, 3).map((app, idx) => (
                     <View key={`${app.appName}-${idx}`} style={styles.chip}>
-                      <Image source={getAppIcon(app.appName)} style={styles.chipIcon} />
-                      <Text style={styles.chipText}>{app.appName} · {app.usageMinutes}m</Text>
+                      <Image
+                        source={getAppIcon(app.appName)}
+                        style={styles.chipIcon}
+                      />
+                      <Text style={styles.chipText}>
+                        {app.appName} · {app.usageMinutes}m
+                      </Text>
                     </View>
                   ))}
                 </View>
@@ -321,7 +334,7 @@ export default function DashboardScreen() {
                   2. Enter your email: {email}
                 </Text>
                 <Text style={styles.instructionStep}>
-                  3. Click "Sync Assignments"
+                  3. Click &quot;Sync Assignments&quot;
                 </Text>
                 <Text style={styles.instructionStep}>
                   4. Pull to refresh this screen
