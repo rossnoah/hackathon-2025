@@ -22,7 +22,7 @@
   "content_scripts": [
     {
       "matches": ["https://moodle.lafayette.edu/calendar/view.php*"],
-      "js": ["content.js"]
+      "js": ["config.js", "content.js"]
     }
   ],
   "icons": {

@@ -76,6 +76,25 @@ app.get("/", (req, res) => {
 	res.sendFile(path.join(__dirname, "public", "dashboard.html"));
 });
 
+// Helper function to ensure user exists (creates if doesn't exist)
+function ensureUserExists(email, pushToken = null) {
+	try {
+		const stmt = db.prepare(`
+      INSERT INTO users (email, push_token, last_seen)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(email) DO UPDATE SET
+        push_token = COALESCE(?, push_token),
+        last_seen = CURRENT_TIMESTAMP
+    `);
+
+		stmt.run(email, pushToken, pushToken);
+		return true;
+	} catch (error) {
+		console.error("Error ensuring user exists:", error);
+		return false;
+	}
+}
+
 // Register or update user
 app.post("/api/register", (req, res) => {
 	const { email, pushToken, notificationsEnabled } = req.body;
@@ -90,26 +109,16 @@ app.post("/api/register", (req, res) => {
 	}
 
 	try {
-		const stmt = db.prepare(`
-      INSERT INTO users (email, push_token, notifications_enabled, last_seen)
-      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(email) DO UPDATE SET
-        push_token = COALESCE(?, push_token),
-        notifications_enabled = COALESCE(?, notifications_enabled),
-        last_seen = CURRENT_TIMESTAMP
-    `);
+		// Use the shared function for basic user creation
+		ensureUserExists(email, pushToken);
 
-		stmt.run(
-			email,
-			pushToken || null,
-			notificationsEnabled !== undefined ? (notificationsEnabled ? 1 : 0) : 1,
-			pushToken || null,
-			notificationsEnabled !== undefined
-				? notificationsEnabled
-					? 1
-					: 0
-				: null,
-		);
+		// Update notifications_enabled if provided
+		if (notificationsEnabled !== undefined) {
+			const updateStmt = db.prepare(`
+        UPDATE users SET notifications_enabled = ? WHERE email = ?
+      `);
+			updateStmt.run(notificationsEnabled ? 1 : 0, email);
+		}
 
 		res.json({
 			success: true,
@@ -248,6 +257,12 @@ app.post("/api/assignments", (req, res) => {
 	}
 
 	try {
+		// Ensure user exists (create if doesn't exist)
+		const userCreated = ensureUserExists(email);
+		if (!userCreated) {
+			return res.status(500).json({ error: "Failed to create/update user" });
+		}
+
 		// Delete old assignments for this user
 		db.prepare("DELETE FROM assignments WHERE email = ?").run(email);
 
@@ -275,7 +290,7 @@ app.post("/api/assignments", (req, res) => {
 			);
 		}
 
-		console.log(`Received ${newAssignments.length} assignments for ${email}`);
+		console.log(`✅ Received ${newAssignments.length} assignments for ${email}`);
 
 		res.json({
 			success: true,
@@ -502,7 +517,7 @@ async function generateDuolingoNotification(assignments, email) {
 			messages: [
 				{
 					role: "system",
-					content: `You are a witty, slightly aggressive notification bot similar to Duolingo's owl. Your job is to remind students about their assignments in a fun, motivating, but slightly guilt-inducing way. Keep it short (max 2 sentences), funny, and personalized. Be creative and vary your approach - sometimes encouraging, sometimes playfully threatening, sometimes disappointed. Make it feel personal and urgent but lighthearted. If you know what apps they've been using, call them out on it (e.g., "stop wasting time on TikTok, you have an assignment due!"). The messages should be vaguely threatening and short.`,
+					content: `You are a witty, highly aggressive notification bot similar to Duolingo's owl. Your job is to remind students about their assignments in a fun, motivating, but slightly guilt-inducing way. Keep it short (max 2 sentences), funny, and personalized. Be creative and vary your approach - sometimes encouraging, very playfully threatening, sometimes disappointed. Make it feel personal and urgent but lighthearted. If you know what apps they've been using, call them out on it (e.g., "stop wasting time on TikTok, you have an assignment due!"). The messages should be vaguely threatening and short. Do not call them by their name or by [Student Name] or anything similar to that.`,
 				},
 				{
 					role: "user",

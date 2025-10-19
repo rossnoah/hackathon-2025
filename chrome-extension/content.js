@@ -68,14 +68,85 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 // Auto-extract on page load and store in chrome storage
-function autoExtractAndStore() {
+async function autoExtractAndStore() {
+  console.log('🔍 Auto-extract function running...');
+
+  // Wait a bit for the page to fully render
+  await new Promise(resolve => setTimeout(resolve, 1500));
+
   const assignments = extractAssignments();
+  console.log(`📚 Extracted ${assignments.length} assignments`);
+
   if (assignments.length > 0) {
     chrome.storage.local.set({
       lastExtractedAssignments: assignments,
       lastExtractedTime: new Date().toISOString()
     });
-    console.log(`Extracted ${assignments.length} assignments`);
+  }
+
+  // Check if there's a pending sync request
+  const result = await chrome.storage.local.get(['pendingSync', 'syncEmail']);
+  console.log('📦 Storage check:', result);
+
+  if (result.pendingSync && result.syncEmail) {
+    console.log('✅ Pending sync detected, triggering auto-sync...');
+    await performAutoSync(assignments, result.syncEmail);
+  } else {
+    console.log('❌ No pending sync found');
+  }
+}
+
+// Perform automatic sync when page loads with pending sync flag
+async function performAutoSync(assignments, email) {
+  console.log('🚀 Starting auto-sync for', email);
+
+  try {
+    // Use CONFIG from injected config.js
+    const SERVER_URL = CONFIG.API_URL;
+
+    console.log('📡 Syncing assignments to server:', SERVER_URL);
+
+    // Send assignments to server
+    const apiResponse = await fetch(`${SERVER_URL}/api/assignments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
+      body: JSON.stringify({
+        email,
+        assignments,
+        extractedAt: new Date().toISOString(),
+      }),
+    });
+
+    const data = await apiResponse.json();
+
+    if (apiResponse.ok) {
+      console.log(`✅ Successfully synced ${assignments.length} assignments!`);
+
+      // Send notification
+      await fetch(`${SERVER_URL}/api/send-notification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: JSON.stringify({
+          email,
+          title: 'Assignments Updated',
+          body: `${assignments.length} assignments synced from Moodle`,
+          data: { type: 'assignments', count: assignments.length },
+        }),
+      });
+    } else {
+      console.error('Error syncing:', data.error || 'Unknown error');
+    }
+  } catch (error) {
+    console.error('Network error:', error);
+  } finally {
+    // Clear the pending sync flag
+    chrome.storage.local.set({ pendingSync: false });
   }
 }
 

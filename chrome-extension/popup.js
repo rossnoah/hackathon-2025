@@ -1,10 +1,8 @@
 let extractedAssignments = [];
+const SERVER_URL = CONFIG.API_URL; // Get from config.js
 
 // Load saved data from storage
-chrome.storage.local.get(['serverUrl', 'email'], (result) => {
-  if (result.serverUrl) {
-    document.getElementById('serverUrl').value = result.serverUrl;
-  }
+chrome.storage.local.get(['email'], (result) => {
   if (result.email) {
     document.getElementById('email').value = result.email;
   }
@@ -16,16 +14,9 @@ document.getElementById('email').addEventListener('change', (e) => {
   chrome.storage.local.set({ email });
 
   // Register user with server
-  const serverUrl = document.getElementById('serverUrl').value;
-  if (serverUrl && email) {
-    registerUser(email, serverUrl);
+  if (email) {
+    registerUser(email, SERVER_URL);
   }
-});
-
-// Save server URL when changed
-document.getElementById('serverUrl').addEventListener('change', (e) => {
-  const url = e.target.value;
-  chrome.storage.local.set({ serverUrl: url });
 });
 
 // Register user with server
@@ -79,16 +70,10 @@ function displayAssignments(assignments) {
 
 // Sync assignments button - extract and send in one action
 document.getElementById('syncBtn').addEventListener('click', async () => {
-  const serverUrl = document.getElementById('serverUrl').value;
   const email = document.getElementById('email').value;
 
   if (!email) {
     showStatus('Please enter your email', 'error');
-    return;
-  }
-
-  if (!serverUrl) {
-    showStatus('Please enter a server URL', 'error');
     return;
   }
 
@@ -100,23 +85,31 @@ document.getElementById('syncBtn').addEventListener('click', async () => {
     if (!tab.url.includes('moodle.lafayette.edu/calendar')) {
       showStatus('Opening Moodle calendar...', 'info');
 
-      // Open the Moodle calendar in a new tab
-      chrome.tabs.create({ url: moodleUrl }, (newTab) => {
-        // Wait for the page to load, then extract and send
-        chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-          if (tabId === newTab.id && info.status === 'complete') {
-            chrome.tabs.onUpdated.removeListener(listener);
-
-            // Wait a bit more for content to render
-            setTimeout(() => {
-              extractAndSend(newTab.id, serverUrl, email);
-            }, 1000);
-          }
-        });
+      // Store email and sync flag in storage for the content script to pick up
+      await chrome.storage.local.set({
+        pendingSync: true,
+        syncEmail: email
       });
+
+      // Open the Moodle calendar in a new tab
+      const newTab = await chrome.tabs.create({ url: moodleUrl });
+
+      // Poll for the tab to complete loading and sync to finish
+      const checkInterval = setInterval(async () => {
+        const result = await chrome.storage.local.get(['pendingSync']);
+        if (!result.pendingSync) {
+          clearInterval(checkInterval);
+          showStatus('Sync completed!', 'success');
+        }
+      }, 500);
+
+      // Timeout after 30 seconds
+      setTimeout(() => {
+        clearInterval(checkInterval);
+      }, 30000);
     } else {
       // Already on the page, extract and send immediately
-      extractAndSend(tab.id, serverUrl, email);
+      extractAndSend(tab.id, SERVER_URL, email);
     }
   } catch (error) {
     showStatus('Error: ' + error.message, 'error');
@@ -149,7 +142,7 @@ async function extractAndSend(tabId, serverUrl, email) {
       showStatus('Sending to server...', 'info');
 
       try {
-        const response = await fetch(`${serverUrl}/api/assignments`, {
+        const response = await fetch(`${SERVER_URL}/api/assignments`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -168,7 +161,7 @@ async function extractAndSend(tabId, serverUrl, email) {
           showStatus(`Successfully synced ${extractedAssignments.length} assignments!`, 'success');
 
           // Also send a notification about new assignments
-          await fetch(`${serverUrl}/api/send-notification`, {
+          await fetch(`${SERVER_URL}/api/send-notification`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "hackathon-app",
+    "name": "Blinky",
     "slug": "hackathon-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,7 +10,13 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.noahross.hackathon-app"
+      "bundleIdentifier": "dev.noah.hackathonappoct1925",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "aps-environment": "production"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +27,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.noahross.hackathonapp"
+      "package": "dev.noah.hackathonappoct1925"
     },
     "web": {
       "output": "static",

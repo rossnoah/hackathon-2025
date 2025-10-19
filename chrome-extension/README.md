@@ -42,32 +42,33 @@ convert -size 128x128 xc:#007bff icon128.png
 
 ### First Time Setup
 
-1. **Start your server:**
-   ```bash
-   cd /Users/noah/Code/hackathon
-   npm run dev
-   ```
+**Note: The API URL is now baked into the extension** - no need to configure the server URL manually!
 
-2. **Start ngrok:**
-   ```bash
-   ngrok http 4000
-   ```
+1. **Configure the API URL (one-time setup):**
+   - The API URL is stored in `.env` and `config.js`
+   - Current URL: `http://f8g08g0s8ggkcg0g4g8os08s.3.89.141.68.sslip.io`
+   - To change it, update both `.env` and `config.js`
 
-3. **Navigate to Moodle:**
+2. **Navigate to Moodle:**
    - Go to https://moodle.lafayette.edu/calendar/view.php?view=upcoming&course=1
    - Make sure you're logged in
 
-4. **Configure the extension:**
+3. **Configure the extension:**
    - Click the extension icon in Chrome toolbar
-   - Enter your ngrok URL (e.g., `https://your-url.ngrok-free.app`)
+   - Enter your email address (e.g., `your.email@lafayette.edu`)
+   - This will auto-register you with the server
 
 ### Extract and Sync Assignments
 
-1. While on the Moodle calendar page, click the extension icon
-2. Click **Extract Assignments**
-3. Review the extracted assignments in the popup
-4. Click **Send to Server** to sync with your server
-5. A push notification will be sent to your mobile app!
+1. Click the extension icon in Chrome toolbar
+2. Enter your email (if not already saved)
+3. Click **Sync Assignments**
+4. The extension will:
+   - Automatically open the Moodle calendar page (if not already there)
+   - Extract all assignments from the page
+   - Send them to the server
+   - Trigger a push notification to your mobile app
+5. The popup will stay open during the process!
 
 ## How It Works
 
@@ -121,10 +122,13 @@ The extension sends assignment data to these endpoints:
 ### File Structure
 ```
 chrome-extension/
-├── manifest.json       # Extension configuration
+├── manifest.json       # Extension configuration (Manifest V3)
+├── config.js          # API URL configuration (baked-in)
+├── .env               # Environment variables (not committed)
+├── background.js      # Background service worker (handles tab navigation)
 ├── content.js         # DOM scraping script
-├── popup.html         # Extension popup UI
-├── popup.js           # Popup logic
+├── popup.html         # Extension popup UI (simplified, no server URL field)
+├── popup.js           # Popup logic (uses CONFIG.API_URL)
 ├── icons/             # Extension icons
 │   ├── icon16.png
 │   ├── icon48.png
@@ -169,6 +173,14 @@ chrome-extension/
 - Data is only sent to YOUR server (configured by you)
 - No third-party services are used
 - Extension only activates on `moodle.lafayette.edu` domain
+
+## Key Features (New!)
+
+✅ **Baked-in API URL** - No need to manually enter server URL
+✅ **Popup stays open** - Extension popup doesn't close when navigating to Moodle
+✅ **Background service worker** - Handles tab navigation seamlessly
+✅ **Auto-registration** - Registers user with server when email is entered
+✅ **Simplified UI** - Only email field needed, server URL is pre-configured
 
 ## Future Enhancements
 
