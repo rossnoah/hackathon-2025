@@ -8,7 +8,7 @@ import { logger } from "../utils/logger";
 
 export function startNotificationJob() {
 	// Scheduled job to send reminders every 60 seconds
-	cron.schedule("*/1 * * * *", async () => {
+	cron.schedule("*/5 * * * *", async () => {
 		logger.info("🔔 Running scheduled notification job...");
 
 		try {

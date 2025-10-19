@@ -153,7 +153,7 @@ CREATE TABLE screentime (
 
 ```javascript
 // Runs every 60 seconds
-cron.schedule("*/15 * * * *", async () => {
+cron.schedule("*/5 * * * *", async () => {
   // 1. Get all users with push tokens
   // 2. For each user with assignments:
   //    a. Generate Duolingo-style message with GPT-4o
