@@ -143,11 +143,8 @@ export default function DashboardScreen() {
   };
 
   const severityColor = useMemo(() => {
-    const pct = insights?.socialMediaPercentage ?? 0;
-    if (pct <= 20) return "#22c55e"; // green
-    if (pct <= 40) return "#f59e0b"; // orange
-    return "#ef4444"; // red
-  }, [insights?.socialMediaPercentage]);
+    return "#3b82f6"; // blue - consistent with design
+  }, []);
 
   const getAppIcon = (name: string) => {
     const k = name.toLowerCase();
@@ -388,11 +385,11 @@ const styles = StyleSheet.create({
   },
 
   screenTimeCard: {
-    backgroundColor: "#150b0b",
+    backgroundColor: "#ffffff",
     borderLeftWidth: 4,
-    borderLeftColor: "#ef4444",
+    borderLeftColor: "#3b82f6",
     borderWidth: 1,
-    borderColor: "rgba(239,68,68,0.2)",
+    borderColor: "rgba(59,130,246,0.2)",
     padding: 20,
     borderRadius: 16,
     marginBottom: 16,
@@ -410,7 +407,7 @@ const styles = StyleSheet.create({
   },
   screenTimeLabel: {
     fontSize: 12,
-    color: "#fca5a5",
+    color: "#3b82f6",
     textTransform: "uppercase",
     letterSpacing: 1,
     fontWeight: "700",
@@ -427,24 +424,24 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   metricLabel: {
-    color: "#E5E7EB",
+    color: "#1f2937",
     fontSize: 16,
     fontWeight: "600",
   },
   metricSub: {
-    color: "#9CA3AF",
+    color: "#6b7280",
     fontSize: 12,
     marginTop: 4,
   },
   screenTimePercentage: {
     fontSize: 48,
     fontWeight: "800",
-    color: "#ffffff",
+    color: "#1f2937",
     marginLeft: 12,
   },
   progressBarTrack: {
     height: 8,
-    backgroundColor: "#2a1a1a",
+    backgroundColor: "#e5e7eb",
     borderRadius: 4,
     overflow: "hidden",
     marginTop: 8,
@@ -461,8 +458,8 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(239,68,68,0.12)",
-    borderColor: "rgba(239,68,68,0.35)",
+    backgroundColor: "rgba(59,130,246,0.12)",
+    borderColor: "rgba(59,130,246,0.35)",
     borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -471,7 +468,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   chipText: {
-    color: "#fecaca",
+    color: "#3b82f6",
     fontSize: 12,
     fontWeight: "600",
   },
@@ -483,17 +480,17 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   ctaButton: {
-    backgroundColor: "rgba(239,68,68,0.15)",
+    backgroundColor: "rgba(59,130,246,0.15)",
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 12,
     marginTop: 14,
     alignSelf: "flex-start",
     borderWidth: 1,
-    borderColor: "rgba(239,68,68,0.35)",
+    borderColor: "rgba(59,130,246,0.35)",
   },
   ctaButtonText: {
-    color: "#fecaca",
+    color: "#3b82f6",
     fontWeight: "700",
     fontSize: 13,
   },
@@ -635,7 +632,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     borderLeftWidth: 4,
-    borderLeftColor: "#ef4444",
+    borderLeftColor: "#3b82f6",
   },
   assignmentTitle: {
     fontSize: 18,
@@ -653,7 +650,7 @@ const styles = StyleSheet.create({
   },
   assignmentDate: {
     fontSize: 14,
-    color: "#ef4444",
+    color: "#3b82f6",
     fontWeight: "600",
   },
   assignmentDescription: {

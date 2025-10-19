@@ -97,7 +97,7 @@ export default function ScreenTimeScreen() {
                 <View style={styles.summaryDivider} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.summaryMetricLabel}>Distractions</Text>
-                  <Text style={[styles.summaryTime, { color: distractionPct > 40 ? '#ff6b6b' : distractionPct > 20 ? '#ff9800' : '#fff' }]}>
+                  <Text style={[styles.summaryTime, { color: '#3b82f6' }]}>
                     {distractionPct}%
                   </Text>
                 </View>
@@ -105,7 +105,7 @@ export default function ScreenTimeScreen() {
 
               <View style={styles.progressBarContainer}>
                 <View style={styles.progressTrack}>
-                  <View style={[styles.progressFill, { width: `${Math.min(distractionPct, 100)}%`, backgroundColor: distractionPct > 40 ? '#ff6b6b' : distractionPct > 20 ? '#ff9800' : '#10b981' }]} />
+                  <View style={[styles.progressFill, { width: `${Math.min(distractionPct, 100)}%`, backgroundColor: '#3b82f6' }]} />
                 </View>
                 <Text style={styles.progressHint}>{distractionMinutes} min on distraction apps</Text>
               </View>
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   summaryCard: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#ffffff',
     padding: 20,
     borderRadius: 16,
     marginBottom: 20,
@@ -217,6 +217,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(59,130,246,0.2)',
+    borderLeftWidth: 4,
+    borderLeftColor: '#3b82f6',
   },
   summaryHeaderRow: {
     flexDirection: 'row',
@@ -226,7 +230,7 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: '#3b82f6',
     textTransform: 'uppercase',
     letterSpacing: 1,
     fontWeight: '700',
@@ -237,18 +241,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   summaryMetricLabel: {
-    color: '#cbd5e1',
+    color: '#6b7280',
     fontSize: 12,
   },
   summaryTime: {
     fontSize: 36,
     fontWeight: '800',
-    color: '#fff',
+    color: '#1f2937',
   },
   summaryDivider: {
     width: 1,
     height: 40,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(59,130,246,0.2)',
     marginHorizontal: 12,
   },
   progressBarContainer: {
@@ -256,7 +260,7 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 8,
-    backgroundColor: '#1e293b',
+    backgroundColor: '#e5e7eb',
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -265,7 +269,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   progressHint: {
-    color: '#94a3b8',
+    color: '#6b7280',
     fontSize: 12,
     marginTop: 6,
   },
@@ -277,8 +281,8 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(59,130,246,0.12)',
+    borderColor: 'rgba(59,130,246,0.35)',
     borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -287,7 +291,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   chipText: {
-    color: '#E5E7EB',
+    color: '#3b82f6',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -319,11 +323,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     borderLeftWidth: 4,
-    borderLeftColor: '#e9ecef',
+    borderLeftColor: '#3b82f6',
   },
   appCardWarning: {
-    backgroundColor: '#fff8e6',
-    borderLeftColor: '#ff9800',
+    backgroundColor: '#fff',
+    borderLeftColor: '#ef4444',
   },
   appHeader: {
     flexDirection: 'row',
@@ -355,17 +359,17 @@ const styles = StyleSheet.create({
   },
   warningTag: {
     fontSize: 11,
-    color: '#ff9800',
+    color: '#ef4444',
     fontWeight: '600',
     marginTop: 4,
   },
   appTime: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#007bff',
+    color: '#3b82f6',
   },
   appTimeWarning: {
-    color: '#ff9800',
+    color: '#ef4444',
   },
   appLastUsed: {
     fontSize: 12,
@@ -385,10 +389,10 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#007bff',
+    backgroundColor: '#3b82f6',
     borderRadius: 3,
   },
   progressBarWarning: {
-    backgroundColor: '#ff9800',
+    backgroundColor: '#ef4444',
   },
 });
