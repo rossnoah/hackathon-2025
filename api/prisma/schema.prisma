@@ -19,6 +19,8 @@ model User {
 
   assignments           Assignment[]
   screentime            Screentime[]
+  friendsInitiated      Friend[]     @relation("UserFriends")
+  friendsReceived       Friend[]     @relation("FriendUser")
 
   @@map("users")
 }
@@ -54,4 +56,17 @@ model Screentime {
   user               User     @relation(fields: [email], references: [email])
 
   @@map("screentime")
+}
+
+model Friend {
+  id          Int      @id @default(autoincrement())
+  userEmail   String   @map("user_email")
+  friendEmail String   @map("friend_email")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation("UserFriends", fields: [userEmail], references: [email])
+  friend      User     @relation("FriendUser", fields: [friendEmail], references: [email])
+
+  @@unique([userEmail, friendEmail])
+  @@map("friends")
 }

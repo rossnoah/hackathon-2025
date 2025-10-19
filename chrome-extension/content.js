@@ -1,5 +1,5 @@
 // Content script to scrape Moodle assignments
-console.log("Blinky Moodle Assignment Tracker: Content script loaded");
+console.log("Clocked Moodle Assignment Tracker: Content script loaded");
 
 function extractAssignments() {
 	const assignments = [];

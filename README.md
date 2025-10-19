@@ -1,4 +1,4 @@
-# Hackathon 2025 - Blinky Assignment Tracker System
+# Hackathon 2025 - Clocked Assignment Tracker System
 
 Noah Ross, Gia Mazza, Jasmina Frederico, and Alex Villalba
 

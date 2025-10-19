@@ -1,4 +1,4 @@
-# Blinky Moodle Assignment Tracker Sync - Chrome Extension
+# Clocked Moodle Assignment Tracker Sync - Chrome Extension
 
 A Chrome extension that extracts assignments from Lafayette College's Moodle calendar and sends them to your notification server.
 
@@ -215,16 +215,19 @@ chrome-extension/
 ### Testing Auto-Sync
 
 1. **Install/Reload the Extension**:
+
    ```
    chrome://extensions/ → Click reload button
    ```
 
 2. **Check Auto-Sync Status**:
+
    - Click the extension icon
    - You should see: "🦇 Auto-sync: Active (every 1 minute)"
    - Last sync time will update automatically
 
 3. **Monitor Background Activity**:
+
    - Go to `chrome://extensions/`
    - Click "Inspect views: service worker" under the extension
    - View console logs showing sync activity every minute
@@ -248,18 +251,21 @@ chrome-extension/
 ### Debugging Auto-Sync
 
 **Check if alarm is set:**
+
 ```javascript
 // In browser console (on extension popup):
-chrome.alarms.getAll().then(console.log)
+chrome.alarms.getAll().then(console.log);
 ```
 
 **View background worker logs:**
+
 - Go to `chrome://extensions/`
-- Find "Blinky Moodle Sync"
+- Find "Clocked Moodle Sync"
 - Click "Inspect views: service worker"
 - Watch console for sync activity
 
 **Common Issues:**
+
 - ❌ "Auto-sync: Inactive" → Reload the extension
 - ❌ No syncs happening → Check background worker console for errors
 - ❌ "No email configured" → Enter your email in the popup

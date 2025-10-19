@@ -4,6 +4,7 @@ import assignmentController from '../controllers/assignment.controller';
 import screentimeController from '../controllers/screentime.controller';
 import notificationController from '../controllers/notification.controller';
 import insightsController from '../controllers/insights.controller';
+import friendsController from '../controllers/friends.controller';
 
 const router = Router();
 
@@ -40,6 +41,20 @@ router.post('/api/send-notification', (req, res) =>
 // Insights routes
 router.get('/api/insights/:email', (req, res) =>
   insightsController.getInsights(req, res)
+);
+
+// Friends routes
+router.post('/api/friends/add', (req, res) =>
+  friendsController.addFriend(req, res)
+);
+router.post('/api/friends/remove', (req, res) =>
+  friendsController.removeFriend(req, res)
+);
+router.get('/api/friends/:email', (req, res) =>
+  friendsController.getFriends(req, res)
+);
+router.get('/api/friends/leaderboard/:email', (req, res) =>
+  friendsController.getLeaderboard(req, res)
 );
 
 export default router;

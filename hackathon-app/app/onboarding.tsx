@@ -57,7 +57,7 @@ export default function OnboardingScreen() {
     >
       <View style={styles.content}>
         <Text style={styles.emoji}>📚</Text>
-        <Text style={styles.title}>Welcome to{"\n"}Blinky</Text>
+        <Text style={styles.title}>Welcome to{"\n"}Clocked</Text>
         <Text style={styles.subtitle}>
           Stay on top of your Moodle assignments with push notifications
         </Text>

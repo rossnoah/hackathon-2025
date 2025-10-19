@@ -42,11 +42,13 @@ npm run dev
 Test each endpoint to ensure backward compatibility:
 
 - [ ] **Health Check**: `GET /health`
+
   ```bash
   curl http://localhost:4000/health
   ```
 
 - [ ] **User Registration**: `POST /api/register`
+
   ```bash
   curl -X POST http://localhost:4000/api/register \
     -H "Content-Type: application/json" \
@@ -54,27 +56,33 @@ Test each endpoint to ensure backward compatibility:
   ```
 
 - [ ] **Get Users**: `GET /api/users`
+
   ```bash
   curl http://localhost:4000/api/users
   ```
 
 - [ ] **Store Assignments**: `POST /api/assignments`
+
   - Test with Chrome extension
 
 - [ ] **Get Assignments**: `GET /api/assignments?email=test@example.com`
+
   ```bash
   curl http://localhost:4000/api/assignments?email=test@example.com
   ```
 
 - [ ] **Store Screentime**: `POST /api/screentime`
+
   - Test with mobile app
 
 - [ ] **Get Insights**: `GET /api/insights/:email`
+
   ```bash
   curl http://localhost:4000/api/insights/test@example.com
   ```
 
 - [ ] **Send Notification**: `POST /api/send-notification`
+
   - Test with valid push token
 
 - [ ] **Toggle Notifications**: `POST /api/toggle-notifications`
@@ -97,12 +105,14 @@ Test each endpoint to ensure backward compatibility:
 ### 4. Database Migration
 
 **Option A: Fresh Start (No Data)**
+
 ```bash
 # Database will be created automatically
 npm run prisma:push
 ```
 
 **Option B: Existing Database**
+
 ```bash
 # Your existing hackathon.db should work as-is
 # Schema is backward compatible
@@ -111,6 +121,7 @@ npm run prisma:generate
 ```
 
 **Option C: Move Database**
+
 ```bash
 # If database is in api/ root
 mkdir -p api/data
@@ -120,6 +131,7 @@ mv api/hackathon.db api/data/hackathon.db
 ### 5. Environment Setup
 
 Update `.env` file:
+
 ```env
 PORT=4000
 OPENAI_API_KEY=sk-proj-your-key-here
@@ -128,6 +140,7 @@ NODE_ENV=development
 ```
 
 For production:
+
 ```env
 NODE_ENV=production
 ```
@@ -149,13 +162,13 @@ npm start
 
 ```bash
 # Build Docker image
-docker build -t blinky-api .
+docker build -t clocked-api .
 
 # Run container
 docker run -p 4000:4000 \
   -e OPENAI_API_KEY=your-key \
   -e DATABASE_URL=file:./data/hackathon.db \
-  blinky-api
+  clocked-api
 
 # Test endpoints
 curl http://localhost:4000/health
@@ -171,6 +184,7 @@ curl http://localhost:4000/health
 ### 9. Deployment (Choose One)
 
 **Coolify / Railway / Render:**
+
 - [ ] Set environment variables
 - [ ] Configure build command: `npm run build`
 - [ ] Configure start command: `npm start`
@@ -178,12 +192,13 @@ curl http://localhost:4000/health
 - [ ] Deploy and test
 
 **VPS:**
+
 ```bash
 # On server
 cd api
 npm install
 npm run build
-pm2 start dist/index.js --name blinky-api
+pm2 start dist/index.js --name clocked-api
 pm2 save
 ```
 
@@ -212,23 +227,27 @@ rm api/server.js
 ## 🔍 Troubleshooting
 
 ### Issue: Dependencies not installing
+
 ```bash
 rm -rf node_modules package-lock.json
 npm install
 ```
 
 ### Issue: Prisma Client not found
+
 ```bash
 npm run prisma:generate
 ```
 
 ### Issue: Build fails
+
 ```bash
 npm install
 npm run build
 ```
 
 ### Issue: Database locked
+
 ```bash
 # Kill all node processes
 pkill node
@@ -236,7 +255,9 @@ npm start
 ```
 
 ### Issue: TypeScript errors
+
 Check that all dependencies are installed:
+
 ```bash
 npm install
 ```
@@ -253,6 +274,7 @@ npm install
 ## 📁 File Changes Summary
 
 ### New Files Created
+
 - `src/` directory with all TypeScript source files
 - `tsconfig.json` - TypeScript configuration
 - `prisma/schema.prisma` - Database schema
@@ -262,10 +284,12 @@ npm install
 - Updated `Dockerfile` for TypeScript builds
 
 ### Modified Files
+
 - `package.json` - New scripts and dependencies
 - `.gitignore` - Added dist/ and build artifacts
 
 ### Old Files (Can Be Removed)
+
 - `server.js` (after verification)
 
 ## 🎯 Success Criteria

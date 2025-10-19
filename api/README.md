@@ -1,6 +1,6 @@
-# Blinky API Server
+# Clocked API Server
 
-TypeScript + Prisma Express server for the Blinky assignment tracking system.
+TypeScript + Prisma Express server for the Clocked assignment tracking system.
 
 ## Quick Start
 

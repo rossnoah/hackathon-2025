@@ -1,4 +1,4 @@
-# Blinky - iOS Build Guide
+# Clocked - iOS Build Guide
 
 ## Building for iOS
 
@@ -27,7 +27,7 @@ This creates the `ios/` directory with the native Xcode project.
 #### Step 2: Open the Project in Xcode
 
 ```bash
-open ios/Blinky.xcworkspace
+open ios/Clocked.xcworkspace
 ```
 
 **Important:** Always open the `.xcworkspace` file, NOT the `.xcodeproj` file (CocoaPods requirement).
@@ -36,9 +36,9 @@ open ios/Blinky.xcworkspace
 
 1. **Wait for Xcode to finish indexing** (progress bar at top)
 
-2. **In the left sidebar**, click on the **Blinky** project (blue icon at the top)
+2. **In the left sidebar**, click on the **Clocked** project (blue icon at the top)
 
-3. **Select the "Blinky" target** (under TARGETS, not PROJECTS)
+3. **Select the "Clocked" target** (under TARGETS, not PROJECTS)
 
 4. **Click the "Signing & Capabilities" tab**
 
@@ -156,5 +156,5 @@ npx expo run:ios --device
 ## Project Info
 
 - **Bundle ID:** `dev.noah.hackathonappoct1925`
-- **App Name:** Blinky
+- **App Name:** Clocked
 - **Platform:** iOS (requires macOS and Xcode)

@@ -1,4 +1,4 @@
-# Blinky Assignment Tracker System - Technical Documentation
+# Clocked Assignment Tracker System - Technical Documentation
 
 ## Overview
 

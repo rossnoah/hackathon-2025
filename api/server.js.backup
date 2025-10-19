@@ -57,6 +57,16 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (email) REFERENCES users(email)
   );
+
+  CREATE TABLE IF NOT EXISTS friends (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_email TEXT,
+    friend_email TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_email) REFERENCES users(email),
+    FOREIGN KEY (friend_email) REFERENCES users(email),
+    UNIQUE(user_email, friend_email)
+  );
 `);
 
 // Middleware
@@ -484,6 +494,191 @@ app.post("/api/screentime", (req, res) => {
 	}
 });
 
+// Add a friend
+app.post("/api/friends/add", (req, res) => {
+	const { userEmail, friendEmail } = req.body;
+
+	if (!userEmail || !friendEmail) {
+		return res
+			.status(400)
+			.json({ error: "Both userEmail and friendEmail are required" });
+	}
+
+	if (userEmail === friendEmail) {
+		return res.status(400).json({ error: "Cannot add yourself as a friend" });
+	}
+
+	try {
+		// Check if friend exists in users table
+		const friendExists = db
+			.prepare("SELECT email FROM users WHERE email = ?")
+			.get(friendEmail);
+
+		if (!friendExists) {
+			return res
+				.status(404)
+				.json({ error: "Friend email not found in system" });
+		}
+
+		// Add bidirectional friendship
+		const stmt = db.prepare(`
+      INSERT OR IGNORE INTO friends (user_email, friend_email)
+      VALUES (?, ?)
+    `);
+
+		stmt.run(userEmail, friendEmail);
+		stmt.run(friendEmail, userEmail);
+
+		res.json({
+			success: true,
+			message: `Added ${friendEmail} as a friend`,
+		});
+	} catch (error) {
+		console.error("Error adding friend:", error);
+		res.status(500).json({ error: "Failed to add friend" });
+	}
+});
+
+// Remove a friend
+app.post("/api/friends/remove", (req, res) => {
+	const { userEmail, friendEmail } = req.body;
+
+	if (!userEmail || !friendEmail) {
+		return res
+			.status(400)
+			.json({ error: "Both userEmail and friendEmail are required" });
+	}
+
+	try {
+		const stmt = db.prepare(`
+      DELETE FROM friends
+      WHERE (user_email = ? AND friend_email = ?)
+         OR (user_email = ? AND friend_email = ?)
+    `);
+
+		stmt.run(userEmail, friendEmail, friendEmail, userEmail);
+
+		res.json({
+			success: true,
+			message: `Removed ${friendEmail} from friends`,
+		});
+	} catch (error) {
+		console.error("Error removing friend:", error);
+		res.status(500).json({ error: "Failed to remove friend" });
+	}
+});
+
+// Get user's friends list
+app.get("/api/friends/:email", (req, res) => {
+	const { email } = req.params;
+
+	if (!email) {
+		return res.status(400).json({ error: "Email is required" });
+	}
+
+	try {
+		const friends = db
+			.prepare(`
+      SELECT f.friend_email as email, u.created_at
+      FROM friends f
+      JOIN users u ON f.friend_email = u.email
+      WHERE f.user_email = ?
+      ORDER BY f.created_at DESC
+    `)
+			.all(email);
+
+		res.json({
+			count: friends.length,
+			friends,
+		});
+	} catch (error) {
+		console.error("Error fetching friends:", error);
+		res.status(500).json({ error: "Failed to fetch friends" });
+	}
+});
+
+// Get leaderboard of friends' screen time
+app.get("/api/friends/leaderboard/:email", (req, res) => {
+	const { email } = req.params;
+
+	if (!email) {
+		return res.status(400).json({ error: "Email is required" });
+	}
+
+	try {
+		// Get all friends for this user
+		const friends = db
+			.prepare(`
+      SELECT friend_email
+      FROM friends
+      WHERE user_email = ?
+    `)
+			.all(email);
+
+		// Add the user themselves to the list
+		const allEmails = [email, ...friends.map((f) => f.friend_email)];
+
+		// Get latest screentime data for each person
+		const leaderboard = [];
+
+		for (const personEmail of allEmails) {
+			const latestScreentime = db
+				.prepare(`
+        SELECT email, app_usage, total_usage_minutes, date
+        FROM screentime
+        WHERE email = ?
+        ORDER BY created_at DESC
+        LIMIT 1
+      `)
+				.get(personEmail);
+
+			if (latestScreentime) {
+				const appUsage = JSON.parse(latestScreentime.app_usage);
+				const topApp = appUsage.length > 0 ? appUsage[0] : null;
+
+				leaderboard.push({
+					email: personEmail,
+					totalMinutes: latestScreentime.total_usage_minutes,
+					topApp: topApp
+						? {
+								name: topApp.appName,
+								minutes: topApp.usageMinutes,
+							}
+						: null,
+					date: latestScreentime.date,
+					isCurrentUser: personEmail === email,
+				});
+			} else {
+				// Include users with no screentime data at the bottom
+				leaderboard.push({
+					email: personEmail,
+					totalMinutes: 0,
+					topApp: null,
+					date: null,
+					isCurrentUser: personEmail === email,
+				});
+			}
+		}
+
+		// Sort by total minutes descending (most usage at top)
+		leaderboard.sort((a, b) => b.totalMinutes - a.totalMinutes);
+
+		// Add ranking
+		const rankedLeaderboard = leaderboard.map((entry, index) => ({
+			...entry,
+			rank: index + 1,
+		}));
+
+		res.json({
+			count: rankedLeaderboard.length,
+			leaderboard: rankedLeaderboard,
+		});
+	} catch (error) {
+		console.error("Error fetching leaderboard:", error);
+		res.status(500).json({ error: "Failed to fetch leaderboard" });
+	}
+});
+
 // Function to generate Duolingo-style notification using GPT-4o
 async function generateDuolingoNotification(assignments, email) {
 	try {
@@ -582,7 +777,7 @@ cron.schedule("*/1 * * * *", async () => {
 						{
 							to: user.push_token,
 							sound: "default",
-							title: "Blinky",
+							title: "Clocked",
 							body: notificationBody,
 							data: {
 								type: "reminder",
