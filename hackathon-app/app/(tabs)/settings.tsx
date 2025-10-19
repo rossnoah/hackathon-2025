@@ -14,11 +14,27 @@ import { useRouter } from "expo-router";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:4000";
 
+type PetPreference =
+  | "auto"
+  | "angry"
+  | "sad"
+  | "good_job"
+  | "academic_success";
+
+const PET_OPTIONS: { key: PetPreference; label: string }[] = [
+  { key: "auto", label: "Auto" },
+  { key: "angry", label: "Angry" },
+  { key: "sad", label: "Sad" },
+  { key: "good_job", label: "Good Job" },
+  { key: "academic_success", label: "Academic Success" },
+];
+
 export default function SettingsScreen() {
   const router = useRouter();
   const [email, setEmail] = useState<string>("");
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [petPreference, setPetPreference] = useState<PetPreference>("auto");
 
   useEffect(() => {
     loadSettings();
@@ -31,6 +47,11 @@ export default function SettingsScreen() {
         setEmail(userEmail);
       }
 
+      const pref = (await AsyncStorage.getItem("petPreference")) as
+        | PetPreference
+        | null;
+      if (pref) setPetPreference(pref);
+
       // Check notification permissions
       const { status } = await Notifications.getPermissionsAsync();
       setNotificationsEnabled(status === "granted");
@@ -38,6 +59,15 @@ export default function SettingsScreen() {
       console.error("Error loading settings:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const setAndPersistPetPreference = async (pref: PetPreference) => {
+    try {
+      setPetPreference(pref);
+      await AsyncStorage.setItem("petPreference", pref);
+    } catch (e) {
+      console.error("Error saving pet preference", e);
     }
   };
 
@@ -169,6 +199,37 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* App Pet Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Baty</Text>
+          <View style={styles.settingItem}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingLabel}>Choose Baty</Text>
+              <Text style={styles.settingDescription}>
+                Pick a mood or choose Auto for screen time-based
+              </Text>
+              <View style={styles.chipGroup}>
+                {PET_OPTIONS.map((opt) => {
+                  const selected = petPreference === opt.key;
+                  return (
+                    <TouchableOpacity
+                      key={opt.key}
+                      style={[styles.chip, selected && styles.chipSelected]}
+                      onPress={() => setAndPersistPetPreference(opt.key)}
+                    >
+                      <Text
+                        style={[styles.chipText, selected && styles.chipTextSelected]}
+                      >
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </View>
+
         {/* Sign Out Button */}
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
           <Text style={styles.signOutText}>Sign Out</Text>
@@ -249,6 +310,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#999",
     marginTop: 2,
+  },
+  chipGroup: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 10,
+  },
+  chip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: "#f3f4f6",
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  chipSelected: {
+    backgroundColor: "#3b82f6",
+  },
+  chipText: {
+    fontSize: 13,
+    color: "#333",
+    fontWeight: "600",
+  },
+  chipTextSelected: {
+    color: "#fff",
   },
   signOutButton: {
     backgroundColor: "#fff",

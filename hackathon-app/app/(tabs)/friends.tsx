@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   StyleSheet,
   View,
@@ -10,6 +10,7 @@ import {
   Image,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 
 interface LeaderboardEntry {
   email: string;
@@ -22,6 +23,8 @@ interface LeaderboardEntry {
   isCurrentUser: boolean;
   rank: number;
 }
+
+type PetPreference = "auto" | "angry" | "sad" | "good_job" | "academic_success";
 
 // Emojis for common apps
 function getAppIcon(name: string) {
@@ -51,19 +54,61 @@ function getAppIcon(name: string) {
   return require("../../assets/images/icon.png");
 }
 
+function getPetAsset(key: Exclude<PetPreference, "auto">) {
+  switch (key) {
+    case "angry":
+      return require("../../assets/images/app-pets/angry_1.png");
+    case "sad":
+      return require("../../assets/images/app-pets/sad_2.png");
+    case "good_job":
+      return require("../../assets/images/app-pets/good_job_sprite.png");
+    case "academic_success":
+      return require("../../assets/images/app-pets/academic_success.png");
+  }
+}
+
+function determinePetForRank(
+  rank: number,
+  total: number
+): Exclude<PetPreference, "auto"> {
+  if (rank === 1) return "academic_success";
+  if (rank <= Math.max(2, Math.ceil(total * 0.3))) return "good_job";
+  if (rank === total) return "angry";
+  return "sad";
+}
+
 export default function FriendsScreen() {
   const [email, setEmail] = useState<string>("");
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [petPreference, setPetPreference] = useState<PetPreference>("auto");
 
   useEffect(() => {
     loadData();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        try {
+          const pref = (await AsyncStorage.getItem(
+            "petPreference"
+          )) as PetPreference | null;
+          if (pref) setPetPreference(pref);
+        } catch (e) {}
+      })();
+      return () => {};
+    }, [])
+  );
+
   const loadData = async () => {
     try {
       const userEmail = await AsyncStorage.getItem("userEmail");
+      const pref = (await AsyncStorage.getItem(
+        "petPreference"
+      )) as PetPreference | null;
+      if (pref) setPetPreference(pref);
       if (userEmail) {
         setEmail(userEmail);
         await fetchLeaderboard(userEmail);
@@ -104,6 +149,11 @@ export default function FriendsScreen() {
     setRefreshing(true);
     if (email) {
       await fetchLeaderboard(email);
+      // Also refresh pref in case it changed in Settings
+      const pref = (await AsyncStorage.getItem(
+        "petPreference"
+      )) as PetPreference | null;
+      if (pref) setPetPreference(pref);
     }
     setRefreshing(false);
   };
@@ -129,6 +179,29 @@ export default function FriendsScreen() {
     if (medal) return medal;
     return `#${rank}`;
   };
+
+  const myEntry = leaderboard.find((e) => e.isCurrentUser);
+  function determinePetForMinutes(
+    myMinutes: number,
+    minMinutes: number,
+    maxMinutes: number
+  ): Exclude<PetPreference, "auto"> {
+    const span = Math.max(1, maxMinutes - minMinutes);
+    const normalized = (myMinutes - minMinutes) / span; // 0 = least, 1 = most
+    if (normalized <= 0.25) return "academic_success";
+    if (normalized <= 0.5) return "good_job";
+    if (normalized <= 0.75) return "sad";
+    return "angry";
+  }
+  const minutesArray = leaderboard.map((e) => e.totalMinutes);
+  const minMinutes = minutesArray.length ? Math.min(...minutesArray) : 0;
+  const maxMinutes = minutesArray.length ? Math.max(...minutesArray) : 0;
+  const batyPetKey: Exclude<PetPreference, "auto"> =
+    petPreference !== "auto"
+      ? (petPreference as Exclude<PetPreference, "auto">)
+      : myEntry
+      ? determinePetForMinutes(myEntry.totalMinutes, minMinutes, maxMinutes)
+      : "good_job";
 
   if (loading) {
     return (
@@ -164,60 +237,67 @@ export default function FriendsScreen() {
               </Text>
             </View>
           ) : (
-            leaderboard.map((entry, index) => (
-              <View
-                key={`${entry.email}-${index}`}
-                style={[
-                  styles.leaderboardCard,
-                  entry.isCurrentUser && styles.leaderboardCardHighlight,
-                  entry.rank <= 3 && styles.leaderboardCardMedal,
-                ]}
-              >
-                <View style={styles.rankContainer}>
-                  <Text
-                    style={[
-                      styles.rankText,
-                      entry.rank <= 3 && styles.rankTextMedal,
-                    ]}
-                  >
-                    {getRankDisplay(entry.rank)}
-                  </Text>
-                </View>
+            leaderboard.map((entry, index) => {
+              return (
+                <View
+                  key={`${entry.email}-${index}`}
+                  style={[
+                    styles.leaderboardCard,
+                    entry.isCurrentUser && styles.leaderboardCardHighlight,
+                    entry.rank <= 3 && styles.leaderboardCardMedal,
+                  ]}
+                >
+                  <View style={styles.rankContainer}>
+                    <Text
+                      style={[
+                        styles.rankText,
+                        entry.rank <= 3 && styles.rankTextMedal,
+                      ]}
+                    >
+                      {getRankDisplay(entry.rank)}
+                    </Text>
+                  </View>
 
-                <View style={styles.userInfo}>
-                  <Text
-                    style={[
-                      styles.userEmail,
-                      entry.isCurrentUser && styles.userEmailHighlight,
-                    ]}
-                  >
-                    {entry.email}
-                    {entry.isCurrentUser && " (You)"}
-                  </Text>
+                  <View style={styles.userInfo}>
+                    <Text
+                      style={[
+                        styles.userEmail,
+                        entry.isCurrentUser && styles.userEmailHighlight,
+                      ]}
+                    >
+                      {entry.email}
+                      {entry.isCurrentUser && " (You)"}
+                    </Text>
 
-                  {entry.topApp && (
-                    <View style={styles.appChip}>
-                      <Image
-                        source={getAppIcon(entry.topApp.name)}
-                        style={styles.appChipIcon}
-                      />
-                      <Text style={styles.appChipText}>
-                        {entry.topApp.name} ·{" "}
-                        {formatMinutes(entry.topApp.minutes)}
-                      </Text>
-                    </View>
-                  )}
-                </View>
+                    {entry.topApp && (
+                      <View style={styles.appChip}>
+                        <Image
+                          source={getAppIcon(entry.topApp.name)}
+                          style={styles.appChipIcon}
+                        />
+                        <Text style={styles.appChipText}>
+                          {entry.topApp.name} ·{" "}
+                          {formatMinutes(entry.topApp.minutes)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
 
-                <View style={styles.timeContainer}>
-                  <Text style={styles.timeText}>
-                    {formatMinutes(entry.totalMinutes)}
-                  </Text>
-                  <Text style={styles.timeLabel}>screen time</Text>
+                  <View style={styles.timeContainer}>
+                    <Text style={styles.timeText}>
+                      {formatMinutes(entry.totalMinutes)}
+                    </Text>
+                    <Text style={styles.timeLabel}>screen time</Text>
+                  </View>
                 </View>
-              </View>
-            ))
+              );
+            })
           )}
+        </View>
+
+        <View style={styles.batySection}>
+          {/* <Text style={styles.batyName}>Baty</Text> */}
+          <Image source={getPetAsset(batyPetKey)} style={styles.batyIcon} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -329,6 +409,12 @@ const styles = StyleSheet.create({
   rankTextMedal: {
     fontSize: 32,
   },
+  petIcon: {
+    width: 40,
+    height: 40,
+    resizeMode: "contain",
+    marginTop: 6,
+  },
   userInfo: {
     flex: 1,
     marginLeft: 12,
@@ -375,5 +461,28 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#999",
     marginTop: 2,
+  },
+  batySection: {
+    marginTop: 12,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    alignItems: "center",
+    paddingVertical: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  batyName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 8,
+  },
+  batyIcon: {
+    width: 120,
+    height: 120,
+    resizeMode: "contain",
   },
 });
