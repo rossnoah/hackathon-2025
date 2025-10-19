@@ -80,14 +80,13 @@ export class FriendsService {
   }
 
   async getLeaderboard(userEmail: string) {
-    // Get all friends for this user
-    const friends = await prisma.friend.findMany({
-      where: { userEmail },
-      select: { friendEmail: true },
+    // Get all users with screentime data
+    const allUsersWithScreentime = await prisma.screentime.findMany({
+      select: { email: true },
+      distinct: ['email'],
     });
 
-    // Add the user themselves to the list
-    const allEmails = [userEmail, ...friends.map(f => f.friendEmail)];
+    const allEmails = allUsersWithScreentime.map(s => s.email);
 
     // Get latest screentime data for each person
     const leaderboard = await Promise.all(

@@ -61,14 +61,10 @@ export class FriendsController {
   }
 
   async getLeaderboard(req: Request, res: Response) {
-    const { email } = req.params;
-
-    if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
-    }
+    const { email } = req.query;
 
     try {
-      const leaderboard = await friendsService.getLeaderboard(email);
+      const leaderboard = await friendsService.getLeaderboard(email as string || '');
       return res.json({
         count: leaderboard.length,
         leaderboard,

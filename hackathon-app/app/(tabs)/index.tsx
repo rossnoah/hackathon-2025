@@ -202,7 +202,7 @@ export default function DashboardScreen() {
 
               <View style={styles.percentRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.metricLabel}>Social media today</Text>
+                  <Text style={styles.metricLabel}>% of your day</Text>
                   {!!insights.totalScreenTimeMinutes && (
                     <Text style={styles.metricSub}>
                       {insights.totalScreenTimeMinutes} min total usage
