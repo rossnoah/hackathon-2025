@@ -176,7 +176,7 @@ export default function SettingsScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Assignment Tracker v1.0</Text>
+          <Text style={styles.footerText}>Blinky v1.0</Text>
           <Text style={styles.footerSubtext}>Made at Lafayette </Text>
         </View>
       </View>

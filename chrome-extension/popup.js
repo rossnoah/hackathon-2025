@@ -68,7 +68,7 @@ function displayAssignments(assignments) {
   listDiv.classList.remove('hidden');
 }
 
-// Sync assignments button - extract and send in one action
+// Sync assignments button - trigger manual sync via background worker
 document.getElementById('syncBtn').addEventListener('click', async () => {
   const email = document.getElementById('email').value;
 
@@ -78,39 +78,16 @@ document.getElementById('syncBtn').addEventListener('click', async () => {
   }
 
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    const moodleUrl = 'https://moodle.lafayette.edu/calendar/view.php?view=upcoming&course=1';
+    showStatus('Starting sync...', 'info');
 
-    // Check if we're already on the Moodle calendar page
-    if (!tab.url.includes('moodle.lafayette.edu/calendar')) {
-      showStatus('Opening Moodle calendar...', 'info');
-
-      // Store email and sync flag in storage for the content script to pick up
-      await chrome.storage.local.set({
-        pendingSync: true,
-        syncEmail: email
-      });
-
-      // Open the Moodle calendar in a new tab
-      const newTab = await chrome.tabs.create({ url: moodleUrl });
-
-      // Poll for the tab to complete loading and sync to finish
-      const checkInterval = setInterval(async () => {
-        const result = await chrome.storage.local.get(['pendingSync']);
-        if (!result.pendingSync) {
-          clearInterval(checkInterval);
-          showStatus('Sync completed!', 'success');
-        }
-      }, 500);
-
-      // Timeout after 30 seconds
-      setTimeout(() => {
-        clearInterval(checkInterval);
-      }, 30000);
-    } else {
-      // Already on the page, extract and send immediately
-      extractAndSend(tab.id, SERVER_URL, email);
-    }
+    // Trigger sync via background worker (same as auto-sync)
+    chrome.runtime.sendMessage({ action: 'manualSync' }, (response) => {
+      if (response && response.success) {
+        showStatus('Sync completed!', 'success');
+      } else {
+        showStatus('Sync failed: ' + (response?.error || 'Unknown error'), 'error');
+      }
+    });
   } catch (error) {
     showStatus('Error: ' + error.message, 'error');
   }
@@ -188,9 +165,66 @@ async function extractAndSend(tabId, serverUrl, email) {
 }
 
 // Load previously extracted assignments if available
-chrome.storage.local.get(['lastExtractedAssignments'], (result) => {
+chrome.storage.local.get(['lastExtractedAssignments', 'lastSyncTime'], (result) => {
   if (result.lastExtractedAssignments) {
     extractedAssignments = result.lastExtractedAssignments;
+    displayAssignments(extractedAssignments);
+  }
+
+  // Update last sync time
+  if (result.lastSyncTime) {
+    updateLastSyncTime(result.lastSyncTime);
+  }
+});
+
+// Update auto-sync status
+async function updateAutoSyncStatus() {
+  try {
+    const alarms = await chrome.alarms.getAll();
+    const syncAlarm = alarms.find(a => a.name === 'syncAssignments');
+
+    const statusText = document.getElementById('syncStatusText');
+
+    if (syncAlarm) {
+      statusText.textContent = 'Active (every 1 minute)';
+      statusText.style.color = '#155724';
+    } else {
+      statusText.textContent = 'Inactive';
+      statusText.style.color = '#721c24';
+    }
+  } catch (error) {
+    console.error('Error checking alarm status:', error);
+  }
+}
+
+// Update last sync time display
+function updateLastSyncTime(isoTimestamp) {
+  const lastSyncEl = document.getElementById('lastSyncTime');
+  const date = new Date(isoTimestamp);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+
+  if (diffMins < 1) {
+    lastSyncEl.textContent = 'Just now';
+  } else if (diffMins < 60) {
+    lastSyncEl.textContent = `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
+  } else {
+    const diffHours = Math.floor(diffMins / 60);
+    lastSyncEl.textContent = `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  }
+}
+
+// Update status on popup open
+updateAutoSyncStatus();
+
+// Listen for storage changes to update last sync time
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'local' && changes.lastSyncTime) {
+    updateLastSyncTime(changes.lastSyncTime.newValue);
+  }
+  if (namespace === 'local' && changes.lastExtractedAssignments) {
+    extractedAssignments = changes.lastExtractedAssignments.newValue;
     displayAssignments(extractedAssignments);
   }
 });

@@ -10,7 +10,13 @@ services:
     environment:
       - PORT=4000
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_PATH=/app/data/hackathon.db
     volumes:
-      # Persist SQLite database
-      - ./api/hackathon.db:/app/hackathon.db
+      # Persist SQLite database - mount the entire data directory
+      - hackathon-data:/app/data
     restart: unless-stopped
+
+volumes:
+  # Named volume for database persistence
+  hackathon-data:
+    driver: local

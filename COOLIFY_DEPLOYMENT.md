@@ -1,6 +1,6 @@
 # Coolify Deployment Guide
 
-This guide will help you deploy the Assignment Tracker API server to Coolify.
+This guide will help you deploy the Blinky Assignment Tracker API server to Coolify.
 
 ## Prerequisites
 

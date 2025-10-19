@@ -1,16 +1,24 @@
-import { useState } from 'react';
-import { StyleSheet, TextInput, View, Text, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useState } from "react";
+import {
+  StyleSheet,
+  TextInput,
+  View,
+  Text,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
+import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function OnboardingScreen() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleContinue = async () => {
-    if (!email || !email.includes('@')) {
-      alert('Please enter a valid email address');
+    if (!email || !email.includes("@")) {
+      alert("Please enter a valid email address");
       return;
     }
 
@@ -18,24 +26,25 @@ export default function OnboardingScreen() {
 
     try {
       // Save email to local storage
-      await AsyncStorage.setItem('userEmail', email);
+      await AsyncStorage.setItem("userEmail", email);
 
       // Register with server
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
+      const API_URL =
+        process.env.EXPO_PUBLIC_API_URL || "http://localhost:4000";
       await fetch(`${API_URL}/api/register`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify({ email }),
       });
 
       // Navigate to tabs (dashboard)
-      router.replace('/(tabs)');
+      router.replace("/(tabs)");
     } catch (error) {
-      console.error('Error registering:', error);
-      alert('Failed to register. Please try again.');
+      console.error("Error registering:", error);
+      alert("Failed to register. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -44,11 +53,11 @@ export default function OnboardingScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={styles.content}>
         <Text style={styles.emoji}>📚</Text>
-        <Text style={styles.title}>Welcome to{'\n'}Assignment Tracker</Text>
+        <Text style={styles.title}>Welcome to{"\n"}Blinky</Text>
         <Text style={styles.subtitle}>
           Stay on top of your Moodle assignments with push notifications
         </Text>
@@ -73,7 +82,7 @@ export default function OnboardingScreen() {
           disabled={loading}
         >
           <Text style={styles.buttonText}>
-            {loading ? 'Setting up...' : 'Continue'}
+            {loading ? "Setting up..." : "Continue"}
           </Text>
         </Pressable>
       </View>
@@ -84,13 +93,13 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   content: {
     flex: 1,
     padding: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   emoji: {
     fontSize: 80,
@@ -98,50 +107,50 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: '#333',
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#333",
     marginBottom: 16,
   },
   subtitle: {
     fontSize: 16,
-    textAlign: 'center',
-    color: '#666',
+    textAlign: "center",
+    color: "#666",
     marginBottom: 48,
     paddingHorizontal: 20,
   },
   inputContainer: {
-    width: '100%',
+    width: "100%",
     marginBottom: 32,
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
     marginBottom: 8,
   },
   input: {
-    width: '100%',
+    width: "100%",
     padding: 16,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 12,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
   },
   button: {
-    width: '100%',
+    width: "100%",
     padding: 16,
-    backgroundColor: '#007bff',
+    backgroundColor: "#007bff",
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   buttonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: "#ccc",
   },
   buttonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

@@ -17,9 +17,7 @@ const openai = new OpenAI({
 });
 
 // Initialize SQLite database
-// Use /app/data directory for better containerization support
-const dbPath =
-	process.env.DATABASE_PATH || path.join(__dirname, "data", "hackathon.db");
+const dbPath = path.join(__dirname, "data", "hackathon.db");
 console.log(`📂 Database path: ${dbPath}`);
 const db = new Database(dbPath);
 
@@ -290,7 +288,9 @@ app.post("/api/assignments", (req, res) => {
 			);
 		}
 
-		console.log(`✅ Received ${newAssignments.length} assignments for ${email}`);
+		console.log(
+			`✅ Received ${newAssignments.length} assignments for ${email}`,
+		);
 
 		res.json({
 			success: true,
@@ -582,7 +582,7 @@ cron.schedule("*/1 * * * *", async () => {
 						{
 							to: user.push_token,
 							sound: "default",
-							title: "📚 Assignment Reminder",
+							title: "Blinky",
 							body: notificationBody,
 							data: {
 								type: "reminder",

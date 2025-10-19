@@ -1,6 +1,6 @@
 # Hackathon API Server
 
-Express.js server for the Assignment Tracker system with SQLite database, OpenAI GPT-4o integration, and Expo push notifications.
+Express.js server for the Blinky Assignment Tracker system with SQLite database, OpenAI GPT-4o integration, and Expo push notifications.
 
 ## Setup
 
